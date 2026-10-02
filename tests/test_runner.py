@@ -126,7 +126,7 @@ async def test_fuel_exhaustion_fails_run():
 async def test_max_time_exceeded():
     session = await _run(
         make_request(
-            position=(5000.0, 0.0, 0.0),
+            position=(1000.0, 0.0, 0.0),
             max_steps=1000,
             max_time_s=100.0,
         )
@@ -134,6 +134,23 @@ async def test_max_time_exceeded():
     summary = session.summary
     assert summary.status == "failed"
     assert summary.failure_reason is FailureReason.MAX_TIME_EXCEEDED
+
+
+@pytest.mark.parametrize("max_range", [1000, None])
+async def test_one_kilometre_guard_also_applies_when_range_option_is_omitted(max_range):
+    session = await _run(
+        make_request(
+            position=(999.99, 0, 0),
+            velocity=(0.1, 0, 0),
+            llm_enabled=False,
+            max_range_m=max_range,
+            max_thrust_n=2.5,
+            max_acceleration_mps2=0.005,
+            max_steps=10,
+        )
+    )
+    assert session.summary.failure_reason is FailureReason.DIVERGED
+    assert session.summary.steps_completed == 1
 
 
 async def test_session_finished_event_set():

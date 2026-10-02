@@ -75,6 +75,11 @@ components:
     textColor: "{colors.primary-text}"
     rounded: "{rounded.segment}"
     padding: "8px 11px"
+  grid-spacing-select:
+    backgroundColor: "#101b22"
+    textColor: "{colors.text}"
+    rounded: "{rounded.control}"
+    padding: "6px 8px"
   capture-confirmation:
     backgroundColor: "#162d27"
     textColor: "#d5f5e9"
@@ -88,11 +93,12 @@ components:
 
 **Creative North Star: "Flight-operations workbench"**
 
-The user selected a flight-operations dashboard and then asked for a more
-ambitious animated frontend. The graphite, mint, and blue identity remains;
-larger typography and detailed schematic spacecraft give the relative flight
-scene more presence. Configuration, capture, and guidance stay readable beside
-the scene so researchers can compare commands with measured effects.
+The research flight-operations dashboard keeps its graphite, mint, and blue
+identity. Larger typography, a NASA ISS primary, and a concept chaser give the
+relative flight scene more presence. Configuration, capture, and guidance stay
+readable beside the scene so researchers can compare commands with measured
+effects. The shared XYZ grid makes the same local port coordinates visible from
+centimetres to hundreds of metres per division.
 
 Motion follows backend measurements. A separate, labelled illustrative Earth
 and static star field frame the spacecraft. Controls remain stable, native, and
@@ -105,6 +111,7 @@ capture.
 - Readable tool evidence
 - Stable control surfaces
 - Spatial telemetry
+- Shared XYZ coordinates at true metre scale
 - Measured motion with a labelled illustrative backdrop
 
 ## Colors
@@ -116,6 +123,11 @@ surface with readable light text. Status is always labelled in words.
 The darker scene surface separates flight geometry from the workbench. Scene
 labels use a pale blue-white; the capture confirmation uses a deep mint surface
 with text tinted from the same hue.
+
+The XYZ legend and scene arrows reuse the established warm red for X, mint for
+Y, and blue for Z. Axis letters accompany color in both the legend and the 3D
+labels. The NASA model status uses target blue when ready and the established
+danger tone for a loading failure; its message states the fallback in words.
 
 ## Typography
 
@@ -143,7 +155,10 @@ actions remain in document flow in two columns; the API reference link stays
 visible. The canvas resizes with its container and has an explicit height:
 570px by default, 640px from 1500px, and 430px through 700px. Camera controls,
 captions, and projected spacecraft labels occupy separate scene regions; labels
-are spaced apart when both docking ports converge.
+are spaced apart when both docking ports converge and their boxes are clamped
+inside the canvas with 10px padding. The grid controls occupy a wrapping row
+below the existing scene overlays, with 12px vertical and 18px horizontal gaps
+and 12px by 20px padding. The model status occupies its own full-width line.
 
 ## Elevation & Depth
 
@@ -168,17 +183,68 @@ simulation time, short explanations, and expandable tool/alternative details.
 Empty and error states explain the next action. Keyboard focus is a two-pixel
 mint outline with a three-pixel offset.
 
-The scene uses detailed schematic models whose origins are the docking ports;
-one foreground scene unit is one metre. A separate shader Earth and static
-stars remain labelled as an illustrative backdrop. Camera buttons expose chaser
-tracking, both-port overview, and target-port views with aria-pressed states;
-dragging enters manual orbit and a camera selection resumes tracking. Chaser
-tracking frames both ports below 10m separation. Native checkboxes control the
-trail, measured relative-velocity arrow, and capture envelopes. Exhaust points
-opposite the applied force while the simulation is running. Positions and attitude
-smooth toward measured telemetry with time-based exponential damping at 18 per
-second; automatic camera movement uses 5 per second. There is no extrapolation.
-Rendering pauses when the scene is offscreen or the document is hidden.
+### Spacecraft and local frame
+
+One foreground scene unit is one metre, and each spacecraft origin is its docking
+port. The primary loads NASA's stationary ISS GLB from the local model directory.
+The locally optimized asset preserves named nodes and mesh geometry, with meshopt
+compression, deduplication, and 1024px WebP textures. Its PMA-2 forward tip is
+translated to the local port origin and rotated 90 degrees about Y. The secondary
+is a dimensional concept chaser with a faceted shell, protective port ring, fins,
+solar panels, and sensor details. The caption identifies the NASA ISS, concept
+chaser, and illustrative Earth separately. Loading failure leaves the schematic
+target visible and a status message explains that reloading retries the asset.
+
+Physics X maps to scene X, physics Y to negative scene Z, and physics Z to scene
+Y. Positions, velocities, force arrows, and attitudes use this shared basis. The
+grid remains fixed in the local coordinate frame while the shared camera orbits
+the grid and spacecraft together. A separate shader Earth and static stars remain
+labelled as an illustrative backdrop.
+
+### Camera view selector
+
+Four native buttons expose "Track chaser", "ISS + chaser", "Full ISS", and
+"Target port" with aria-pressed states; "ISS + chaser" is initially selected.
+Dragging enters manual orbit, scroll zooms, and selecting a camera resumes
+automatic placement. Reset refits the selected mode. Chaser tracking shows the
+chaser at its true model scale and frames both ports below 10m separation or after
+capture. Target port is a close inspection view of the primary port.
+
+The overview includes the ISS bounds and the chaser's physical extent; Full ISS
+fits the station alone. Both derive distance from a bounding sphere and the
+smaller horizontal or vertical camera half field of view, with 1.25 padding.
+Automatic placement refits after model loading and container resize. This keeps
+physical scale consistent as the canvas aspect ratio changes.
+
+### Shared XYZ grid and overlays
+
+The native 3D grid checkbox starts checked. The spacing select offers Auto,
+1cm, 10cm, 1m, 10m, and 100m per division. Auto uses 10cm below 1m port
+separation, 1m below 10m, 10m through 200m, and 100m above 200m. Three
+intersecting XY, XZ, and YZ planes meet at the primary docking-port origin, with
+20 divisions spanning ten spacings in either direction. Translucent grid lines,
+colored positive-axis arrows, and constant screen-size labels establish the
+frame; a live output states the actual spacing and drag gesture. Changing
+spacing replaces and disposes the previous grid geometry and label textures.
+
+Native checkboxes also control the measured flight trail, relative-velocity arrow,
+and capture envelopes. Exhaust points opposite the applied force while the
+simulation is running. Positions and attitude smooth toward measured telemetry
+with time-based exponential damping at 18 per second; automatic camera movement
+uses 5 per second. There is no extrapolation. Rendering pauses when the scene is
+offscreen or the document is hidden.
+
+### Initial placement fields
+
+Native XYZ position inputs show metres and accept arbitrary decimal steps. The
+default primary port is [0, 0, 0] and the secondary is [100, 0, 0], giving 100m
+initial separation. The inclusive permitted distance is 2cm to 1km, measured as
+the Euclidean separation between the two configured ports. Starting range min.
+and max. can narrow that band. A native validity message reports the allowed
+band and measured separation, with a 1e-9 metre endpoint tolerance. Invalid
+fields reveal their disclosure before browser focus. Seeded randomization places
+the secondary relative to the configured primary within the selected band, and
+the scene caption reports playback speed and actual initial separation.
 
 Buttons transition background and border color over 160ms; fields transition
 border color over the same duration. Reduced motion removes these transitions
@@ -199,7 +265,10 @@ from its rendered width so text retains its size.
 - Do keep numerical telemetry tied to backend events.
 - Do label the deterministic planner and provider fallback honestly.
 - Do preserve standard form semantics and reduced-motion behavior.
-- Do keep schematic models and illustrative scenery explicitly labelled.
+- Do identify the NASA ISS, concept chaser, fallback target, and illustrative scenery explicitly.
+- Do share the local coordinate frame and true metre scale across models, grid, and telemetry.
+- Do keep grid spacing and visibility in native labelled controls, with the current division size visible.
+- Do fit full-scene cameras from physical bounds and the limiting field of view when the canvas resizes.
 - Do reserve capture confirmation for the server's terminal docked event.
 - Don't use animation to conceal latency or invent a physical outcome.
 - Don't turn an observed success rate into an unqualified accuracy guarantee.

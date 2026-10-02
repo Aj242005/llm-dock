@@ -48,10 +48,10 @@ let latest = null;
 
 function fields(prefix, label, primary) {
   const triple = (name, title, unit, values) =>
-    `<div class="group-label">${title}<span>${unit}</span></div><div class="triplet">${["x", "y", "z"].map((axis, i) => `<label>${axis.toUpperCase()}<input id="${prefix}-${name}-${axis}" type="number" value="${values[i]}" step="0.01" required aria-label="${label} ${title} ${axis}"></label>`).join("")}</div>`;
+    `<div class="group-label">${title}<span>${unit}</span></div><div class="triplet">${["x", "y", "z"].map((axis, i) => `<label>${axis.toUpperCase()}<input id="${prefix}-${name}-${axis}" type="number" value="${values[i]}" step="${name === "position" ? "any" : "0.01"}" required aria-label="${label} ${title} ${axis}"></label>`).join("")}</div>`;
   return `<details ${primary ? "" : "open"}><summary>${label}</summary><div class="satellite-name"><b class="${primary ? "primary" : "secondary"}-key"></b>${primary ? "Target docking port" : "Approaching docking port"}</div>
   ${triple("position", "Position", "m", primary ? [0, 0, 0] : [100, 0, 0])}
-  ${!primary ? '<p class="field-help">100 m by default. Edit the starting range bounds under Guidance & capture.</p>' : ""}
+  ${!primary ? '<p class="field-help">100 m by default. Any starting port distance from 2 cm to 1 km is allowed.</p>' : ""}
   ${!primary ? '<button id="randomize" class="random-button" type="button"><i data-lucide="shuffle"></i>Randomize secondary position</button>' : ""}
   ${triple("velocity", "Velocity", "m/s", [0, 0, 0])}
   ${triple("attitude", "Attitude · roll / pitch / yaw", "deg", [0, 0, 0])}
@@ -64,7 +64,7 @@ function fields(prefix, label, primary) {
   <p class="field-help">Zero speed is permitted during braking and capture.</p></details>`;
 }
 $("satellite-fields").innerHTML =
-  fields("p", "Primary spacecraft", true) +
+  fields("p", "Primary · International Space Station", true) +
   fields("s", "Secondary spacecraft", false);
 if (window.matchMedia("(max-width: 700px)").matches)
   document.querySelectorAll(".configuration details").forEach((item) => {
@@ -141,6 +141,7 @@ function payload() {
       max_thrust_n: number("max-thrust"),
       max_acceleration_mps2: number("max-acceleration"),
       near_port_speed_mps: Math.min(0.02, number("capture-speed")),
+      max_range_m: 1000,
       playback_speed: number("playback-speed"),
       fuel_consumption_rate_pct_per_s: 0.001,
       controller: $("controller").value,
@@ -195,15 +196,16 @@ function preview() {
   const minimum = number("start-range-min"),
     maximum = number("start-range-max");
   $("s-position-x").setCustomValidity(
-    minimum > 0 &&
+    minimum >= 0.02 &&
+      maximum <= 1000 &&
       minimum <= maximum &&
-      separation >= minimum &&
-      separation <= maximum
+      separation >= minimum - 1e-9 &&
+      separation <= maximum + 1e-9
       ? ""
       : `Initial port separation must be between ${minimum} and ${maximum} m (currently ${separation.toFixed(3)} m).`,
   );
   $("playback-status").textContent =
-    `${number("playback-speed")}× playback · ${separation.toFixed(1)} m initial separation`;
+    `${number("playback-speed")}× playback · ${separation.toFixed(separation < 1 ? 3 : 1)} m initial separation`;
 }
 // Reveal any invalid field before the browser tries to focus it.
 $("mission-form").addEventListener(
@@ -340,7 +342,8 @@ function renderDecision(event) {
 
 function clearExplanation(starting = false) {
   $("planner-status").textContent = starting
-    ? "Starting guidance request" : "Ready for a new session";
+    ? "Starting guidance request"
+    : "Ready for a new session";
   $("latest-rationale").textContent = starting
     ? "Preparing the first maneuver request."
     : "Start a session to request a new maneuver.";
@@ -532,9 +535,11 @@ document.querySelectorAll("[data-camera]").forEach((button) => {
     scene.setCamera(button.dataset.camera);
   };
 });
-for (const name of ["trail", "vectors", "envelope"])
+for (const name of ["trail", "vectors", "envelope", "grid"])
   $(`show-${name}`).onchange = (event) =>
     scene.setOverlay(name, event.target.checked);
+$("grid-spacing").onchange = (event) =>
+  scene.setGridSpacing(event.target.value);
 $("mission-fields").addEventListener("change", preview);
 $("randomize").onclick = () => {
   let seed = number("seed") >>> 0;
@@ -542,10 +547,10 @@ $("randomize").onclick = () => {
     seed = (1664525 * seed + 1013904223) >>> 0;
     return seed / 2 ** 32;
   };
-  // Leave a margin so coordinate rounding stays inside the configured band.
+  // Sample a seeded direction and distance inside the optional starting band.
   const minimum = number("start-range-min"),
     maximum = number("start-range-max");
-  if (minimum >= maximum) return;
+  if (minimum > maximum || minimum < 0.02 || maximum > 1000) return;
   const margin = Math.min(0.02, (maximum - minimum) / 4);
   const radius = minimum + margin + random() * (maximum - minimum - 2 * margin);
   const z = random() * 2 - 1;
@@ -557,9 +562,7 @@ $("randomize").onclick = () => {
   ];
   const primary = vector("p-position");
   ["x", "y", "z"].forEach((axis, i) => {
-    $(`s-position-${axis}`).value = (primary[i] + radius * values[i]).toFixed(
-      2,
-    );
+    $(`s-position-${axis}`).value = String(primary[i] + radius * values[i]);
   });
   preview();
 };

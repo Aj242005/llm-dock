@@ -169,10 +169,10 @@
                     ><input
                       id="start-range-min"
                       type="number"
-                      value="80"
-                      min="1.25"
-                      max="10000"
-                      step="0.25"
+                      value="0.02"
+                      min="0.02"
+                      max="1000"
+                      step="0.01"
                       required
                   /></label>
                   <label
@@ -180,10 +180,10 @@
                     ><input
                       id="start-range-max"
                       type="number"
-                      value="120"
-                      min="1.25"
-                      max="10000"
-                      step="0.25"
+                      value="1000"
+                      min="0.02"
+                      max="1000"
+                      step="0.01"
                       required
                   /></label>
                 </div>
@@ -280,7 +280,7 @@
               <span>LOCAL RELATIVE FRAME</span>
             </div>
             <div class="spacecraft-label primary-label" id="primary-label">
-              <b></b><span>Primary<small>Target port</small></span>
+              <b></b><span>ISS<small>Primary docking port</small></span>
             </div>
             <div class="spacecraft-label secondary-label" id="secondary-label">
               <b></b><span>Secondary<small>Controlled chaser</small></span>
@@ -300,11 +300,14 @@
               </div>
             </div>
             <div class="scene-toolbar" role="group" aria-label="Camera view">
-              <button type="button" data-camera="chaser" aria-pressed="true">
+              <button type="button" data-camera="chaser" aria-pressed="false">
                 Track chaser
               </button>
-              <button type="button" data-camera="overview" aria-pressed="false">
-                Both ports
+              <button type="button" data-camera="overview" aria-pressed="true">
+                ISS + chaser
+              </button>
+              <button type="button" data-camera="station" aria-pressed="false">
+                Full ISS
               </button>
               <button type="button" data-camera="port" aria-pressed="false">
                 Target port
@@ -312,7 +315,7 @@
             </div>
             <div class="scene-caption">
               <span>Drag to orbit · scroll to zoom</span>
-              <span>Schematic models · illustrative Earth backdrop</span>
+              <span>NASA ISS model · concept chaser · illustrative Earth</span>
               <span id="playback-status"
                 >1× playback · 100 m initial separation</span
               >
@@ -336,6 +339,34 @@
               envelope</label
             >
             <span>X / Y horizontal · Z vertical</span>
+          </div>
+          <div
+            class="coordinate-controls"
+            role="group"
+            aria-label="3D coordinate grid"
+          >
+            <label
+              ><input type="checkbox" id="show-grid" checked />3D grid</label
+            >
+            <label
+              >Grid spacing
+              <select id="grid-spacing">
+                <option value="auto">Auto · metres</option>
+                <option value="0.01">1 cm</option>
+                <option value="0.1">10 cm</option>
+                <option value="1">1 m</option>
+                <option value="10">10 m</option>
+                <option value="100">100 m</option>
+              </select></label
+            >
+            <span class="axis-legend"
+              ><b class="axis-x">X</b><b class="axis-y">Y</b
+              ><b class="axis-z">Z</b></span
+            >
+            <output id="grid-readout"
+              >10 m per division · drag to rotate</output
+            >
+            <span id="iss-status" role="status">Loading NASA ISS model…</span>
           </div>
           <div class="telemetry" aria-label="Live telemetry">
             <div>

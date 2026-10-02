@@ -1,18 +1,29 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { createCoordinateGrid } from "./coordinate-grid.js";
+import { loadIssModel } from "./iss-model.js";
 
 // One foreground unit is one metre. The origin of each model is its docking port.
 // Earth is a separate illustrative backdrop; it never participates in physics.
 export function createScene(container) {
   let renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      preserveDrawingBuffer: true,
+    });
   } catch {
     const message = document.getElementById("scene-message");
     message.hidden = false;
     message.textContent =
       "WebGL is unavailable. Telemetry and session controls remain available.";
-    return { update() {}, resetCamera() {}, setCamera() {}, setOverlay() {} };
+    return {
+      update() {},
+      resetCamera() {},
+      setCamera() {},
+      setOverlay() {},
+      setGridSpacing() {},
+    };
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
   renderer.setClearColor(0x070e16);
@@ -88,7 +99,7 @@ export function createScene(container) {
       emissiveIntensity: 0.6,
       roughness: 0.3,
     });
-    cylinder(group, 0.67, 1.8, direction * 1.1, white);
+    cylinder(group, 0.67, 1.8, direction * 1.1, isPrimary ? white : dark);
     cylinder(group, 0.55, 0.45, direction * 2.2, foil);
     cylinder(group, 0.38, 0.6, direction * 0.35, dark);
     cylinder(group, 0.36, 0.09, 0, dark);
@@ -163,6 +174,62 @@ export function createScene(container) {
       0.68,
       0,
     ]);
+    if (!isPrimary) {
+      // A faceted concept vehicle: ceramic armour, illuminated rails, optics,
+      // radiator fins and individual manoeuvring nozzles, all at real scene scale.
+      const shell = addMesh(
+        group,
+        new THREE.CylinderGeometry(0.73, 0.65, 1.25, 8),
+        white,
+        [1.1, 0, 0],
+      );
+      shell.rotation.z = Math.PI / 2;
+      ring(group, 0.7, 0.014, 0.48, accent);
+      ring(group, 0.7, 0.014, 1.7, accent);
+      for (let side = 0; side < 4; side++) {
+        const angle = (side * Math.PI) / 2 + Math.PI / 4;
+        const y = Math.cos(angle),
+          z = Math.sin(angle);
+        addMesh(group, new THREE.BoxGeometry(1.0, 0.045, 0.045), accent, [
+          1.1,
+          y * 0.69,
+          z * 0.69,
+        ]);
+        const nozzle = addMesh(
+          group,
+          new THREE.ConeGeometry(0.12, 0.24, 12, 1, true),
+          dark,
+          [1.85, y * 0.63, z * 0.63],
+        );
+        nozzle.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 1, 0),
+          new THREE.Vector3(0, y, z),
+        );
+        const fin = addMesh(
+          group,
+          new THREE.BoxGeometry(0.8, 0.045, 0.3),
+          silver,
+          [2.1, y * 0.7, z * 0.7],
+        );
+        fin.rotation.x = angle;
+      }
+      const glass = new THREE.MeshStandardMaterial({
+        color: 0x193947,
+        metalness: 0.75,
+        roughness: 0.1,
+        emissive: 0x14434b,
+        emissiveIntensity: 0.2,
+      });
+      for (const z of [-0.23, 0.23]) {
+        addMesh(group, new THREE.SphereGeometry(0.12, 16, 12), glass, [
+          0.28,
+          0.4,
+          z,
+        ]);
+      }
+      cylinder(group, 0.44, 0.15, 2.5, dark);
+      ring(group, 0.35, 0.04, 2.6, silver);
+    }
     const exhaust = addMesh(
       group,
       new THREE.ConeGeometry(0.16, 1, 16),
@@ -177,7 +244,9 @@ export function createScene(container) {
     return { group, exhaust, direction };
   }
 
-  const primary = spacecraft(0x90b9e9, true);
+  const placeholder = spacecraft(0x90b9e9, true);
+  const primary = { group: new THREE.Group() };
+  primary.group.add(placeholder.group);
   const secondary = spacecraft(0x8fd9c4, false);
   scene.add(primary.group, secondary.group);
 
@@ -332,9 +401,13 @@ export function createScene(container) {
   let force = new THREE.Vector3();
   let running = false;
   let captured = false;
-  let cameraMode = "chaser";
+  let cameraMode = "overview";
   let followCamera = true;
-  const overlays = { trail: true, vectors: true, envelope: true };
+  const overlays = { trail: true, vectors: true, envelope: true, grid: true };
+  const grid = createCoordinateGrid(scene);
+  let gridSpacing = "auto";
+  let issLoaded = false;
+  let stationBounds;
   const points = [];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const cameraTarget = new THREE.Vector3();
@@ -351,12 +424,35 @@ export function createScene(container) {
     if (cameraMode === "port") {
       cameraTarget.set(0, 0, 0);
       cameraPosition.set(5.5, 3, 6.5);
-    } else if (cameraMode === "overview" || distance < 10 || captured) {
-      const radius = Math.max(7, distance * 0.65);
-      cameraTarget.copy(position).multiplyScalar(0.5);
+    } else if (cameraMode === "station" || cameraMode === "overview") {
+      // Fit the full ISS and chaser. Loaded station geometry extends behind the
+      // port; the selected camera keeps that physical extent in view.
+      const bounds = issLoaded
+        ? stationBounds.clone().applyMatrix4(
+            new THREE.Matrix4().makeRotationFromQuaternion(primaryQuaternion),
+          )
+        : new THREE.Box3(
+            new THREE.Vector3(-60, -35, -60),
+            new THREE.Vector3(5, 40, 60),
+          );
+      if (cameraMode === "overview") {
+        // Include the physical chaser extent, rather than only its port point.
+        bounds.expandByPoint(position.clone().addScalar(4));
+        bounds.expandByPoint(position.clone().addScalar(-4));
+      }
+      bounds.getCenter(cameraTarget);
+      const size = bounds.getSize(new THREE.Vector3());
+      const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+      const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * camera.aspect);
+      const limitingHalfFov = Math.min(verticalHalfFov, horizontalHalfFov);
+      // Fit a sphere around both craft with room for their labels on narrow screens.
+      const distance = (size.length() / 2 / Math.sin(limitingHalfFov)) * 1.25;
       cameraPosition
         .copy(cameraTarget)
-        .add(new THREE.Vector3(radius * 0.7, radius * 0.6, radius * 1.4));
+        .add(new THREE.Vector3(0.7, 0.6, 1.4).normalize().multiplyScalar(distance));
+    } else if (distance < 10 || captured) {
+      cameraTarget.copy(position).multiplyScalar(0.5);
+      cameraPosition.copy(cameraTarget).add(new THREE.Vector3(8, 6, 11));
     } else {
       // Track the chaser at true model scale. The separate overview fits both ports.
       cameraTarget.copy(position).multiplyScalar(0.98);
@@ -382,10 +478,31 @@ export function createScene(container) {
     overlays[name] = enabled;
     trail.visible = overlays.trail;
     primaryEnvelope.visible = secondaryEnvelope.visible = overlays.envelope;
+    grid.group.visible = overlays.grid;
+  }
+
+  function updateGrid() {
+    const distance = desiredPosition.length();
+    const spacing =
+      gridSpacing === "auto"
+        ? distance < 1
+          ? 0.1
+          : distance < 10
+            ? 1
+            : distance <= 200
+              ? 10
+              : 100
+        : Number(gridSpacing);
+    grid.setSpacing(spacing);
+  }
+  function setGridSpacing(value) {
+    gridSpacing = value;
+    updateGrid();
   }
 
   function update(state, reset = false) {
     desiredPosition = vector(state.position_m);
+    updateGrid();
     desiredQuaternion = quaternion(state.orientation_quat || [1, 0, 0, 0]);
     primaryQuaternion = quaternion(
       state.primary?.orientation_quat || [1, 0, 0, 0],
@@ -449,6 +566,7 @@ export function createScene(container) {
     camera.aspect = backdropCamera.aspect = width / height;
     camera.updateProjectionMatrix();
     backdropCamera.updateProjectionMatrix();
+    if (followCamera) resetCamera();
   }).observe(container);
   new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;
@@ -528,10 +646,35 @@ export function createScene(container) {
       document.getElementById("secondary-label").style.left =
         `${center + 72}px`;
     }
+    // Keep each measured-port label inside the canvas after separating the pair.
+    for (const id of ["primary-label", "secondary-label"]) {
+      const label = document.getElementById(id);
+      if (label.hidden) continue;
+      const halfWidth = label.offsetWidth / 2;
+      const x = Math.max(
+        halfWidth + 10,
+        Math.min(container.clientWidth - halfWidth - 10, parseFloat(label.style.left)),
+      );
+      const y = Math.max(
+        label.offsetHeight + 10,
+        Math.min(container.clientHeight - 10, parseFloat(label.style.top)),
+      );
+      label.style.left = `${x}px`;
+      label.style.top = `${y}px`;
+    }
     renderer.clear();
     renderer.render(backdrop, backdropCamera);
     renderer.clearDepth();
     renderer.render(scene, camera);
   });
-  return { update, resetCamera, setCamera, setOverlay };
+  loadIssModel(primary.group, placeholder.group, () => {
+    issLoaded = true;
+    // Cache model bounds once instead of visiting every ISS mesh each frame.
+    const rotation = primary.group.quaternion.clone();
+    primary.group.quaternion.identity();
+    stationBounds = new THREE.Box3().setFromObject(primary.group);
+    primary.group.quaternion.copy(rotation);
+    if (followCamera) resetCamera();
+  });
+  return { update, resetCamera, setCamera, setOverlay, setGridSpacing };
 }

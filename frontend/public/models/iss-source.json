@@ -1,0 +1,11 @@
+{
+  "title": "International Space Station",
+  "source": "https://science.nasa.gov/resource/international-space-station-3d-model/",
+  "download": "https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/i/ISS_stationary.glb",
+  "usage_guidelines": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+  "source_sha256": "26dba905b4b7555edbcb0c5f5a61b5c18659f5166076ab27dbb0e64025759fca",
+  "local_sha256": "1912dd804f3e455243596dcd1a5c4a46b2f148d78deaaa03005babe267300bcd",
+  "local_bytes": 5600896,
+  "processing": "glTF Transform4.5.1; no mesh simplification; preserved named nodes; meshopt compression, deduplication, 1024px WebP textures",
+  "display_alignment": "PMA2 forward tip approx [0,-0.1006,21.00535]m; translated to local port origin and rotated90deg aboutY; source span~112m."
+}

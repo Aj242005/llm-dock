@@ -31,11 +31,11 @@ def main():
         page.wait_for_timeout(1000)
         assert page.locator("#scene canvas").count() == 1
         page.screenshot(path=str(output / "desktop.png"), full_page=True)
-        for mode in ["overview", "port", "chaser"]:
+        for mode in ["overview", "station", "port", "chaser"]:
             button = page.locator(f'[data-camera="{mode}"]')
             button.click()
             assert button.get_attribute("aria-pressed") == "true"
-        for name in ["trail", "vectors", "envelope"]:
+        for name in ["trail", "vectors", "envelope", "grid"]:
             page.locator(f"#show-{name}").uncheck()
             page.locator(f"#show-{name}").check()
 
@@ -45,7 +45,7 @@ def main():
         page.locator("#s-position-x").fill("200")
         page.locator("#s-position-x").dispatch_event("change")
         assert page.locator("#range").inner_text() == "100.00 m"
-        for position in ["179.99", "220.01"]:
+        for position in ["100.019", "1100.01"]:
             page.locator("#s-position-x").fill(position)
             page.locator("#s-position-x").dispatch_event("change")
             assert not page.locator("#mission-form").evaluate("form => form.checkValidity()")
@@ -53,7 +53,7 @@ def main():
         assert page.locator("#mission-form").evaluate("form => form.checkValidity()")
         assert page.locator("#range").inner_text() == "100.00 m"
         assert page.locator("#playback-speed").input_value() == "1"
-        results["initial_separation_validation"] = "100 m default; configurable 80–120 m band"
+        results["initial_separation_validation"] = "100 m default; 0.02–1000 m permitted"
 
         def short_capture_scenario():
             # The 100 m backend and live Vertex runs have separate full exports.
@@ -163,7 +163,7 @@ def main():
                 mobile.locator("#s-position-z").fill("10")
                 mobile.locator("#s-position-z").dispatch_event("change")
                 mobile.locator("#randomize").click()
-                assert 80 <= float(mobile.locator("#range").inner_text().split()[0]) <= 120
+                assert 0.02 <= float(mobile.locator("#range").inner_text().split()[0]) <= 1000
                 assert mobile.locator("#mission-form").evaluate("form => form.checkValidity()")
                 # Let the offscreen-paused canvas draw the changed state before capture.
                 mobile.locator("#scene").scroll_into_view_if_needed()

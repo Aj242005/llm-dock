@@ -1,0 +1,90 @@
+{
+  "initial_separation_validation": "100 m default; 0.02\u20131000 m permitted",
+  "hybrid": {
+    "session": "3874ff324d68",
+    "learned_advice_enabled": true,
+    "summary": {
+      "session_id": "3874ff324d684c4ab6045f90c6074dd6",
+      "status": "docked",
+      "stop_reason": "docked",
+      "failure_reason": null,
+      "steps_completed": 711,
+      "sim_time_s": 355.5,
+      "phase": "docked",
+      "final_secondary": {
+        "position_m": [
+          1.2463719487674432,
+          -0.020224111575444778,
+          1.7932043689728668e-05
+        ],
+        "velocity_mps": [
+          -0.018999643732334648,
+          0.00011297160819302288,
+          2.8519829509229456e-05
+        ],
+        "orientation_quat": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "angular_velocity_radps": [
+          6.351386890452817e-18,
+          -7.070544250490779e-19,
+          2.927648226556427e-22
+        ],
+        "fuel_remaining_pct": 99.6444999999983,
+        "orbital_elements": null,
+        "inertia_kg_m2": [
+          600.0,
+          900.0,
+          900.0
+        ],
+        "mass_kg": 500.0,
+        "name": "Spacecraft",
+        "capture_radius_m": 1.25,
+        "motion_limits": {
+          "min_speed_mps": 0.0,
+          "max_speed_mps": 2.0,
+          "max_horizontal_speed_mps": 2.0,
+          "max_vertical_speed_mps": 1.0
+        },
+        "inertial_position_m": null
+      },
+      "controller": "lqr",
+      "metrics": {
+        "delta_v_mps": 0.1325390500937697,
+        "ise": 7303.124726549912,
+        "max_commanded_thrust_n": 2.5000000000000004,
+        "total_llm_calls": 12,
+        "llm_fallback_calls": 0,
+        "anomaly_events_count": 0
+      },
+      "events_emitted": 749,
+      "llm_enabled": true,
+      "error": null
+    }
+  },
+  "stop_restart": "passed",
+  "manual_capture": "passed",
+  "responsive_chart_text": "at least 10.5 screen pixels at 320 and 390px",
+  "viewports": [
+    {
+      "width": 320,
+      "content": 320
+    },
+    {
+      "width": 390,
+      "content": 390
+    },
+    {
+      "width": 768,
+      "content": 768
+    },
+    {
+      "width": 1440,
+      "content": 1440
+    }
+  ],
+  "javascript_errors": []
+}

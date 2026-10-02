@@ -1,0 +1,108 @@
+{
+    "disposition":  "ship",
+    "scope":  "Requested ISS model, concept chaser, shared XYZ grid, camera extensions, and 2 cmÃ¢â‚¬â€œ1 km initial placement controls; incumbent dashboard preserved.",
+    "inputs":  "Code-led extension. No approved comp, decision comp, QUALITY BAR card, or separate five-block surface contract supplied; DESIGN.md and PRODUCT.md are the inherited authority.",
+    "persistence":  {
+                        "status":  "pass",
+                        "evidence":  [
+                                         "PRODUCT.md exists and describes configurable research docking experiments and local port coordinates.",
+                                         "Token-bearing DESIGN.md and .impeccable/design.json exist; shipped palette, IBM Plex Sans, flat workbench surfaces, scene units, and native controls preserve the incumbent world.",
+                                         "Documentation of the extended model and four camera modes belongs to the pending documenter handoff."
+                                     ]
+                    },
+    "fidelity":  [
+                     {
+                         "element":  "TYPE",
+                         "status":  "match",
+                         "evidence":  "Self-hosted IBM Plex Sans and distinct heading, section, instrument, and body sizes visible in desktop/mobile captures and styles.css. Detector\u0027s flat-type-hierarchy warning assumes 16px for all linked-CSS roles and does not describe the rendered result."
+                     },
+                     {
+                         "element":  "MATERIAL",
+                         "status":  "match",
+                         "evidence":  "NASA textured ISS GLB visibly renders in full-station and target-port captures; concept chaser renders as dimensional geometry in scene-chaser.png. Source JSON records NASA origin, optimization, hashes, and metre-scale port alignment."
+                     },
+                     {
+                         "element":  "GROUND",
+                         "status":  "match",
+                         "evidence":  "Graphite #10191f page, #162128 workbench, and #070e16 scene are specified in DESIGN.md and implemented in CSS/scene.js; captures preserve the inherited value and temperature."
+                     },
+                     {
+                         "element":  "Shared XYZ grid",
+                         "status":  "match",
+                         "evidence":  "coordinate-grid.js adds three intersecting planes and labelled axes to the spacecraft scene. scene-rotated.png shows the changed shared view; verification.json records drag, visibility, and all spacing checks."
+                     },
+                     {
+                         "element":  "Metre/centimetre scale controls",
+                         "status":  "match",
+                         "evidence":  "Native grid checkbox/select, coloured textual axis legend, and per-division output remain visible at desktop, 390px, and 320px; scene-centimetre-grid.png shows centimetre-labelled geometry."
+                     },
+                     {
+                         "element":  "ISS and chaser inspection",
+                         "status":  "match",
+                         "evidence":  "Four labelled camera buttons expose chaser, overview, full ISS, and target port; the dedicated desktop captures show distinct working compositions."
+                     },
+                     {
+                         "element":  "2 cmÃ¢â‚¬â€œ1 km initial placement",
+                         "status":  "match",
+                         "evidence":  "Position fields use step any, 100m default and explicit help. main.js computes primary-relative Euclidean separation with endpoint tolerance and seeded randomization. verification.json records translated endpoint acceptance, outside rejection, and exact 2cm randomization."
+                     },
+                     {
+                         "element":  "Mobile ISS + chaser overview",
+                         "status":  "contradicted",
+                         "evidence":  "Settled mobile-390.png and mobile-320.png select ISS + chaser but clip the station at the left canvas edge and omit the approaching chaser/Secondary label. Source cameraPlacement does not derive fit distance from camera field of view. Parent confirms captures were settled in view with reduced motion."
+                     },
+                     {
+                         "element":  "Workbench responsive extension",
+                         "status":  "match",
+                         "evidence":  "Both mobile captures show controls and telemetry within the viewport. verification.json records no horizontal overflow at 320, 390, or 1440px and no JavaScript errors."
+                     }
+                 ],
+    "ceiling":  "Requested native 3D devices are implemented. No separate QUALITY BAR card was supplied; broader dashboard ambition is outside this refinement review.",
+    "material_fixes":  [
+                           {
+                               "id":  "F1",
+                               "check":  "Fidelity / responsive shared-scene inspection",
+                               "finding":  "Correct the shared overview fit at narrow aspect ratios so the full ISS and chaser extent and both port labels remain in view at 320px and 390px; derive distance from the limiting camera field of view with padding, retain true metre scale, and recapture the same supplied viewport/camera files for a verdict."
+                           }
+                       ],
+    "keep":  "Preserve the NASA ISS material and port origin, true spatial scale, shared orbit grid, chaser close view, SI labels, and incumbent flight-operations dashboard.",
+    "capture_validity":  "All nine supplied captures opened and valid; desktop and mobile show document top, named scene captures show loaded matching views. Mobile clipping is a build defect, not invalid evidence.",
+    "limitations":  "No browser or live simulation execution performed by reviewer; functional endpoint and control evidence comes from the supplied verification record plus source inspection.",
+    "original_review_disposition":  "fix",
+    "verdict_history":  [
+                            {
+                                "scope":  "F1 only; no broad new review",
+                                "capture_validity":  "All nine recaptured files opened and valid",
+                                "verdict":  [
+                                                {
+                                                    "id":  "F1",
+                                                    "status":  "partial",
+                                                    "evidence":  "mobile-390.png and mobile-320.png now show the full ISS extent and both port positions, preserving the shared grid. At 320px the Secondary label box still crosses the right canvas boundary and clips the Controlled chaser line."
+                                                }
+                                            ],
+                                "regressions":  [
+
+                                                ],
+                                "remaining":  [
+                                                  "Complete F1 by clamping both projected label boxes within the canvas with padding while keeping them separated; recapture the same supplied files for scoring."
+                                              ],
+                                "disposition":  "fix"
+                            }
+                        ],
+    "verdict_pass":  {
+                         "scope":  "F1 only; ship covers the scored fix",
+                         "capture_validity":  "All nine supplied files re-opened and valid after the second fix round",
+                         "verdict":  [
+                                         {
+                                             "id":  "F1",
+                                             "status":  "resolved",
+                                             "evidence":  "mobile-390.png and mobile-320.png show the complete ISS extent, both port positions, and both full label boxes inside the canvas. At 320px Controlled chaser is fully readable with right-edge padding. Shared grid, desktop overview, and dedicated chaser/port views remain intact in the same recaptured packet."
+                                         }
+                                     ],
+                         "regressions":  [
+
+                                         ],
+                         "remaining":  "clear",
+                         "disposition":  "ship"
+                     }
+}

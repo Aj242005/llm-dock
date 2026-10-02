@@ -279,10 +279,9 @@ class SimulationRunner:
             # ---- divergence guards BEFORE propagating: an unstable command
             #      (e.g. from a bad RL policy) must never push the state into
             #      numerical blow-up — fail the run cleanly instead ----
-            if (
-                cfg.max_range_m is not None
-                and float(np.linalg.norm(truth.position)) > cfg.max_range_m
-            ) or float(np.linalg.norm(truth.omega)) > cfg.max_omega_radps:
+            if (float(np.linalg.norm(truth.position)) > (cfg.max_range_m or 1000)) or float(
+                np.linalg.norm(truth.omega)
+            ) > cfg.max_omega_radps:
                 await self._fail(step, sim_time, FailureReason.DIVERGED)
                 return
 
@@ -315,6 +314,9 @@ class SimulationRunner:
                 ).tolist()
 
             self._last_truth = truth.deep_copy()
+            if float(np.linalg.norm(truth.position)) > (cfg.max_range_m or 1000):
+                await self._fail(step, sim_time, FailureReason.DIVERGED)
+                return
             self._primary_frame.position_m = (
                 np.asarray(self.request.primary.position_m)
                 + np.asarray(self.request.primary.velocity_mps) * sim_time

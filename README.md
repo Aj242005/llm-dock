@@ -30,12 +30,15 @@ to select the included Kaggle policy and its matching normalization file.
 Select **Use learned PPO advice** for the hybrid flow. Start, stop, capture,
 and export from the dashboard.
 
-Dashboard sessions start **100 m** apart, with editable starting bounds of
-**80–120 m**. Random placement stays inside the configured band, and invalid
+Dashboard sessions start **100 m** apart. Any initial separation from
+**2 cm to 1 km** is permitted, with optional narrower bounds. Random placement
+stays inside the configured band, and invalid
 manual positions cannot start a session. The request sends `initial_separation_range_m`, which
-the backend validates using both three-dimensional port positions. This limit
-applies only to the initial state; capture still requires at most 1.25 m.
-Research API clients can omit the initial-range option for other experiments.
+the backend validates using both three-dimensional port positions. The 2 cm
+minimum applies to initial placement; the 1 km maximum also guards the running
+simulation. Capture still requires at most 1.25 m, low speed, and alignment.
+API clients can omit the narrower band, but must stay within 2 cm–1 km initially.
+For longer approaches, increase the time and step budgets in Guidance & capture.
 
 The secondary defaults to **0.10 m/s** total and horizontal speed, **0.05 m/s**
 vertical speed, **2.5 N** total thrust, and **0.005 m/s²** total local acceleration.
@@ -48,13 +51,21 @@ Accelerated playback is explicitly selectable for experiments and does not
 increase the physical speed limit. The clock and spacecraft state are held
 while the planner responds; Stop cancels that wait.
 
-The 3D view includes detailed schematic spacecraft, a separate illustrative
-Earth backdrop, and three cameras: **Track chaser**, **Both ports**, and
-**Target port**. Drag to orbit and scroll to zoom. Flight trails, relative
+The primary spacecraft uses NASA's [International Space Station 3D model](https://science.nasa.gov/resource/international-space-station-3d-model/),
+served locally with optimized textures and geometry compression. Its forward
+PMA-2 port is placed at the simulation origin. The chaser is an authored futuristic
+concept with faceted armour, illuminated rails, optics, and manoeuvring nozzles.
+The Earth backdrop is illustrative. Four cameras provide **Track chaser**,
+**ISS + chaser**, **Full ISS**, and **Target port** views.
+Drag to orbit and scroll to zoom. A shared **X/Y/Z coordinate grid** rotates with
+the same camera; select automatic spacing or 1 cm, 10 cm, 1 m, 10 m, and 100 m
+divisions. Physics Z points up. Flight trails, relative
 velocity vectors, and each port's capture envelope can be toggled independently.
 Positions and attitudes follow server telemetry; the capture announcement
 appears only after the server confirms docking. Reduced motion removes spatial
 transitions, and offscreen rendering pauses. Fonts are served locally.
+See `frontend/public/models/README.md` for NASA attribution, asset hashes, and
+the display alignment. Visual geometry does not add a hull-collision physics model.
 
 To reproduce the browser checks with the backend running and frontend built:
 

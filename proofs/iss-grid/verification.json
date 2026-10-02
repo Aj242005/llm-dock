@@ -1,0 +1,8 @@
+{
+  "shared_camera_rotation": "pointer drag changes the rendered scene and grid",
+  "grid_controls": "all six spacings and visibility toggle passed",
+  "placement_boundaries": "translated 2 cm and 1 km accepted; outside values rejected; exact 2 cm randomization accepted",
+  "iss_model": "NASA GLB loaded successfully on desktop and both mobile viewports",
+  "responsive": "no horizontal overflow at 320px, 390px, and 1440px",
+  "javascript_errors": []
+}

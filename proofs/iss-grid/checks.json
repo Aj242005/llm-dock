@@ -1,0 +1,23 @@
+{
+  "backend_tests": {
+    "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -p pytest_asyncio.plugin -q",
+    "passed": 109
+  },
+  "ruff": "check and format --check passed",
+  "frontend": "npm run build passed; Vite reports Three.js chunk 536.31 kB before gzip",
+  "notebook": "IPython-transformed syntax checked; all 32 embedded Python/API/README source files matched checkout; recorded outputs retained",
+  "nasa_model": "local SHA-256 matched frontend/public/models/iss-source.json",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.10",
+  "research_limit": "New distance envelope and visual changes do not establish trained PPO performance over 0.02?1000 m. Original training proof scope remains as recorded.",
+  "browser_capture_note": "Initial harness stopped at a collapsed Guidance disclosure; exposed fields and completed checks. Reviewer F1 corrected camera-fit and label clamping in two batches; rebuilt and recaptured all nine final screenshots.",
+  "live_capture": {
+    "initial_distance_m": 7.5,
+    "maximum_relative_speed_mps": 0.05481436534713817,
+    "final_range_m": 1.2465360202115814,
+    "final_speed_mps": 0.019000000997909876,
+    "status": "docked",
+    "planner": "deterministic heuristic with trained PPO advice",
+    "playback": 200
+  }
+}

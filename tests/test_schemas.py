@@ -56,6 +56,34 @@ def test_initial_separation_uses_both_positions_in_three_dimensions():
     )
 
 
+@pytest.mark.parametrize("distance", [0.02, 0.035, 100, 1000])
+def test_full_starting_distance_envelope_accepts_boundaries(distance):
+    assert make_request(position=(distance, 0, 0)).secondary.position_m[0] == distance
+
+
+@pytest.mark.parametrize("distance", [0, 0.0199, 1000.001])
+def test_starting_distance_limits_apply_without_custom_bounds(distance):
+    with pytest.raises(ValidationError, match="Initial port separation"):
+        make_request(position=(distance, 0, 0))
+
+
+def test_two_centimetre_boundary_with_translated_primary():
+    SimulateRequest(
+        primary=SatelliteState(
+            position_m=[100, 200, 300],
+            orbital_elements=OrbitalElements(semi_major_axis_m=6_878_000),
+        ),
+        secondary=SatelliteState(position_m=[100.02, 200, 300]),
+        config=SimulationConfig(initial_separation_range_m=(0.02, 1000)),
+    )
+
+
+@pytest.mark.parametrize("bounds", [(0.01, 1000), (0.02, 1001)])
+def test_custom_bounds_cannot_exceed_distance_envelope(bounds):
+    with pytest.raises(ValidationError, match="Initial separation bounds"):
+        make_request(initial_separation_range_m=bounds)
+
+
 def test_request_without_orbit_is_rejected():
     with pytest.raises(ValidationError):
         SimulateRequest(

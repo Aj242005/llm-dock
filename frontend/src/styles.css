@@ -633,6 +633,52 @@ input[type="number"] {
   left: 15%;
   text-align: center;
 }
+.coordinate-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+.coordinate-controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.coordinate-controls input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.coordinate-controls select {
+  width: auto;
+  margin: 0;
+  padding: 6px 8px;
+}
+.axis-legend {
+  display: flex;
+  gap: 10px;
+}
+.axis-x {
+  color: #ffb1a5;
+}
+.axis-y {
+  color: #8fd9c4;
+}
+.axis-z {
+  color: #90b9e9;
+}
+#iss-status {
+  flex-basis: 100%;
+  color: #90b9e9;
+}
+#iss-status[data-state="error"] {
+  color: #ffb1a5;
+}
 .telemetry {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

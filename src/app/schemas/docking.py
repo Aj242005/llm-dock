@@ -248,7 +248,7 @@ class SimulationConfig(BaseModel):
     # range exceeds ``max_range_m`` or the body rate exceeds ``max_omega_radps``
     # (an unstable policy — e.g. a bad RL checkpoint — can fling the chaser or
     # tumble it; both also protect the integrator from numerical blow-up).
-    max_range_m: float | None = Field(default=10_000.0, gt=0.0)
+    max_range_m: float | None = Field(default=1000.0, gt=0.0, le=1000.0)
     max_omega_radps: float = Field(default=5.0, gt=0.0)
     # Optional wall-clock delay between SSE events (demo pacing for a watching
     # frontend; 0 = stream as fast as the sim produces events).
@@ -311,12 +311,18 @@ class SimulateRequest(BaseModel):
 
     @model_validator(mode="after")
     def _validate(self) -> SimulateRequest:
+        separation = math.dist(self.primary.position_m, self.secondary.position_m)
+        # Coordinate subtraction can differ by a few floating-point bits at a boundary.
+        tolerance = 1e-9
+        if not 0.02 - tolerance <= separation <= 1000 + tolerance:
+            raise ValueError("Initial port separation must be between 0.02 and 1000 m")
         if self.config.initial_separation_range_m is not None:
             minimum, maximum = self.config.initial_separation_range_m
-            if not 0 < minimum <= maximum:
-                raise ValueError("Initial separation bounds must satisfy 0 < minimum <= maximum")
-            separation = math.dist(self.primary.position_m, self.secondary.position_m)
-            if not minimum <= separation <= maximum:
+            if not 0.02 <= minimum <= maximum <= 1000:
+                raise ValueError(
+                    "Initial separation bounds must satisfy 0.02 <= minimum <= maximum <= 1000"
+                )
+            if not minimum - tolerance <= separation <= maximum + tolerance:
                 raise ValueError(
                     f"Initial port separation must be between {minimum:g} and {maximum:g} m "
                     f"(received {separation:.3f} m)"

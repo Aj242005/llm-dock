@@ -1,0 +1,24 @@
+{
+  "health": {
+    "status": "ok"
+  },
+  "rl_readiness": {
+    "providers": {
+      "vertex": true,
+      "heuristic": true,
+      "openai": false,
+      "openrouter": false,
+      "groq": false,
+      "anthropic": false
+    },
+    "default_provider": "vertex",
+    "default_models": {
+      "vertex": "gemini-3.8-flash"
+    },
+    "rl_available": true,
+    "rl_reason": "Trained policy loaded and inference verified",
+    "capture_range_m": 1.25
+  },
+  "dashboard_http_status": 200,
+  "audit_readme_http_status": 200
+}

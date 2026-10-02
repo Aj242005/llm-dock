@@ -44,6 +44,8 @@ class ReasoningInput(BaseModel):
     anomaly_context: list[AnomalyDetail] = Field(default_factory=list)
     priority_change: str | None = None
     rl_advisor: RlAdvisorSuggestion | None = None
+    rl_advisor_status: str = "disabled"
+    rl_advisor_reason: str | None = None
     capture: dict = Field(default_factory=dict)
     primary_limits: dict = Field(default_factory=dict)
     secondary_limits: dict = Field(default_factory=dict)
@@ -229,11 +231,12 @@ class LangChainAgent(ReasoningAgent):
             "openrouter": settings.llm_model_openrouter,
             "anthropic": "claude-sonnet-4-5",
         }
+        self.model = model or defaults[provider]
         if provider == "vertex":
             from langchain_google_genai import ChatGoogleGenerativeAI
 
             self.chat = ChatGoogleGenerativeAI(
-                model=model or defaults[provider],
+                model=self.model,
                 api_key=key,
                 vertexai=True,
                 temperature=0,
@@ -247,14 +250,14 @@ class LangChainAgent(ReasoningAgent):
             from langchain_anthropic import ChatAnthropic
 
             self.chat = ChatAnthropic(
-                model=model or defaults[provider],
+                model=self.model,
                 api_key=key,
                 timeout=settings.llm_timeout_s,
                 max_retries=0,
             )
         else:
             self.chat = ChatOpenAI(
-                model=model or defaults[provider],
+                model=self.model,
                 api_key=key,
                 base_url=settings.llm_base_url or PROVIDER_BASE_URLS[provider],
                 timeout=settings.llm_timeout_s,
@@ -306,6 +309,8 @@ class LangChainAgent(ReasoningAgent):
                     "A positive minimum speed is only a transit preference; allow zero for braking and docking. "
                     "For abort hold current position and brake. For sensor loss brake conservatively. "
                     "Compare learned advice against limits and explain adoption or rejection. "
+                    "RL availability is given by inspect_rl_heuristic; never claim advice is missing "
+                    "when its proposal is present. Its status distinguishes disabled from inference failure. "
                     "Physics continues while you plan; readings are timestamped snapshots. "
                     "Your response is rechecked against the latest state. Preserve large braking margins. "
                     "Provide rationale in plain natural-language sentences for an operator: explain measured "

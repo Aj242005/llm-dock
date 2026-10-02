@@ -115,8 +115,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--max-range-m",
         type=float,
-        default=10_000.0,
-        help="Divergence guard bound (None disables).",
+        default=1000.0,
+        help="Divergence guard bound in metres (at most 1000).",
     )
     p.add_argument(
         "--rl-model", type=str, default=None, help="Trained policy zip (controller 'rl')."

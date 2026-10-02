@@ -58,6 +58,7 @@ class RlAdvisor:
         self.normalize_path = normalize_path or settings.rl_normalize_path
         self._controller = None  # lazy: RlController pulls in the RL extras
         self._load_error: str | None = None
+        self.last_error: str | None = None
 
     def suggest(
         self,
@@ -71,21 +72,24 @@ class RlAdvisor:
         """
         controller = self._get_controller()
         if controller is None or subgoal is None:
+            self.last_error = self._load_error or "No guidance target was supplied"
             return None
 
         from app.simulation.controllers.base import ControlContext
 
         try:
             cmd = controller.compute(state, subgoal, dt=1.0, ctx=ControlContext())
-        except Exception:  # noqa: BLE001 - advisory only; never crash the sim
+        except Exception as exc:  # noqa: BLE001 - advisory only; never crash the sim
+            self.last_error = f"Policy inference failed ({type(exc).__name__})"
             logger.warning(
                 "rl_advisor_failed",
-                extra={"error": str(self._load_error or "policy compute failed")},
+                extra={"error": str(exc)},
             )
             return None
 
         accel = np.asarray(cmd.force_n, dtype=float) / self.mass_kg
         if not np.all(np.isfinite(accel)):
+            self.last_error = "Policy returned a non-finite acceleration"
             logger.warning("rl_advisor_non_finite_command")
             return None
 
@@ -96,10 +100,14 @@ class RlAdvisor:
         )
 
         p_norm = float(np.linalg.norm(p_sugg))
+        if not np.isfinite(p_sugg).all() or not np.isfinite(v_sugg).all():
+            self.last_error = "Policy projection was non-finite"
+            return None
         closing = 0.0
         if p_norm > 1e-9:
             closing = max(0.0, -float(np.dot(v_sugg, p_sugg) / p_norm))
 
+        self.last_error = None
         return RlAdvisorSuggestion(
             suggested_position_m=[float(v) for v in p_sugg],
             suggested_velocity_mps=[float(v) for v in v_sugg],
@@ -134,3 +142,33 @@ class RlAdvisor:
             self._load_error = str(exc)
             logger.warning("rl_advisor_load_failed", extra={"error": self._load_error})
             return None
+
+
+def rl_readiness() -> dict:
+    """Check the same load and inference path used by sessions, without exposing paths."""
+    from pathlib import Path
+
+    settings = get_settings()
+    if not settings.rl_model_path or not settings.rl_normalize_path:
+        return {
+            "available": False,
+            "reason": "Configure LLM_DOCKING_RL_MODEL_PATH and LLM_DOCKING_RL_NORMALIZE_PATH",
+        }
+    if not all(Path(p).is_file() for p in (settings.rl_model_path, settings.rl_normalize_path)):
+        return {"available": False, "reason": "Configured policy or normalization file is missing"}
+    advisor = RlAdvisor()
+    proposal = advisor.suggest(
+        RigidBodyState(position=np.array([50.0, 0.0, 0.0])),
+        LlmSubgoal(
+            target_position_m=[25, 0, 0],
+            target_velocity_mps=[-0.1, 0, 0],
+            closing_speed_mps=0.1,
+            rationale="Readiness probe",
+        ),
+    )
+    return {
+        "available": proposal is not None,
+        "reason": "Trained policy loaded and inference verified"
+        if proposal
+        else "Policy could not load or predict; check the server log",
+    }

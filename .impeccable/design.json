@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-02T15:19:08.193Z",
+  "generatedAt": "2026-10-02T16:21:15Z",
   "title": "Design System: Docking Lab",
   "extensions": {
     "motion": [
@@ -128,7 +128,7 @@
     {
       "name": "Guidance entry",
       "kind": "card",
-      "description": "A flat log entry with source, simulation time, request-time rationale, and native expandable tool evidence including snapshot time, age, and applied flag. Discarded proposals retain their explanation and receive explicit discarded labels; current telemetry continues while the provider plans.",
+      "description": "A flat log entry with source, simulation time, request-time rationale, and native expandable tool evidence including snapshot time, age, and applied flag. Discarded proposals retain their explanation and receive explicit discarded labels; status states 'Delayed response discarded · fresh deterministic guidance'. Fresh bounded deterministic guidance uses current measurements and excludes the stale learned proposal. The event supplies recovery_subgoal separately; its rationale appears after 'Current recovery maneuver:' in the latest explanation, and tool evidence exposes it as recovery_maneuver. The learned-advice control starts disabled during actual policy load and inference verification, then becomes enabled and checked by default when verified; Reset restores that verified default. Switching it off explicitly states that the planner will receive no learned proposal. Every latest learned assessment begins with a verified proposal statement or the disabled/unavailable reason; tool evidence records learned_advice_status and learned_advice_reason beside the actual proposal or 'No learned advice used'. Current telemetry continues while the provider plans.",
       "html": "<article class='ds-decision'><div class='ds-top'><span class='ds-source'>deterministic planner</span><span>0.0 s &#183; step 0</span></div><h3>Final approach</h3><p>Planner rationale from its request-time snapshot.</p><details><summary>Tools &amp; learned advice</summary><pre>{}</pre></details></article>",
       "css": ".ds-decision{background:var(--surface,#162128);padding:0 0 20px;margin-bottom:20px;border-bottom:1px solid var(--line,#30424d);color:#e5edf1;font-family:'IBM Plex Sans',sans-serif}.ds-top{display:flex;justify-content:space-between;font-size:10px;color:var(--muted,#a0b3be);margin-bottom:10px}.ds-source{color:var(--accent,#8fd9c4)}.ds-decision h3{font-size:12px;font-weight:500;margin:0 0 9px;line-height:1.5}.ds-decision p{font-size:12px;color:#c5d2da;line-height:1.65;margin:0}.ds-decision details{padding:10px 0 0;border-top:0}.ds-decision summary{font-size:11px;font-weight:400;color:var(--blue,#90b9e9);margin-bottom:9px;cursor:pointer}.ds-decision summary:focus-visible{outline:2px solid var(--accent,#8fd9c4);outline-offset:3px}.ds-decision pre{white-space:pre-wrap;word-break:break-word;font-size:10px;color:#b5c6d1;line-height:1.65;margin:0}"
     },
@@ -176,6 +176,8 @@
       "Do label the deterministic planner and provider fallback honestly.",
       "Do keep planning activity, current telemetry, and request-time reasoning separately labelled.",
       "Do expose decision snapshot age and whether a returned proposal was applied or discarded.",
+      "Do distinguish a verified learned proposal from disabled or unavailable advice before showing the planner's assessment.",
+      "Do retain discarded proposal evidence and label fresh deterministic recovery from current measurements separately.",
       "Do preserve standard form semantics and reduced-motion behavior.",
       "Do identify the NASA ISS, concept chaser, fallback target, and illustrative scenery explicitly.",
       "Do share the local coordinate frame and true metre scale across models, grid, and telemetry.",

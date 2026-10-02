@@ -93,8 +93,10 @@ class SimulationRunner:
         self.session = session
         self.request = request
         self.settings = settings or _default_settings()
-        self.agent = agent or ReasoningAgentFactory.build(
-            request.config.provider, model=request.config.model
+        self.agent = agent or (
+            ReasoningAgentFactory.build(request.config.provider, model=request.config.model)
+            if request.config.llm_enabled
+            else HeuristicAgent()
         )
         self.heuristic = heuristic or ReasoningAgentFactory.heuristic()
 
@@ -109,13 +111,18 @@ class SimulationRunner:
             position_m=request.primary.position_m, orientation_quat=request.primary.orientation_quat
         )
         self.session.request_data = request.model_dump(mode="json")
+        self.session.request_data["config"]["provider"] = (
+            request.config.provider or self.settings.mode
+        )
+        self.session.request_data["config"]["model"] = getattr(
+            self.agent, "model", request.config.model
+        )
         self._command_limited = False
         self._planning_task: asyncio.Task | None = None
         self._guidance_mode = "coasting"
         # Lazy RL advisor (hybrid mode: the LLM planner sees a suggestion from
         # the trained policy). None = not requested or unavailable.
         self._rl_advisor: RlAdvisor | None = None
-        self._rl_advisor_unavailable = False
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -164,6 +171,8 @@ class SimulationRunner:
         truth.omega -= np.asarray(primary.angular_velocity_radps)
         rng = np.random.default_rng(cfg.seed)
         controller = build_controller(cfg.controller, truth.mass_kg, truth.inertia, n)
+        safety_controller = build_controller("lqr", truth.mass_kg, truth.inertia, n)
+        safety_context = ControlContext()
         ctx = ControlContext()
         anomalies = AnomalyManager(cfg.anomalies, rng)
 
@@ -191,6 +200,8 @@ class SimulationRunner:
 
             aborting = anomalies.priority_change_active(step) == "abort"
             sensor_stale = any(s.observing_dropout for s in anomalies.states)
+            self._capture_blocked = aborting or sensor_stale
+            self.session.capture = self._capture(truth)
             if (
                 not aborting
                 and not sensor_stale
@@ -257,7 +268,21 @@ class SimulationRunner:
                 )
                 self._guidance_mode = "abort_braking" if aborting else "sensor_braking"
             command = (
-                controller.compute(observed, active_subgoal, dt, ctx)
+                # The simulator's independent safety channel uses truth during
+                # injected sensor faults, and never delegates braking to PPO.
+                safety_controller.compute(
+                    truth,
+                    LlmSubgoal(
+                        target_position_m=truth.position.tolist(),
+                        target_velocity_mps=[0, 0, 0],
+                        closing_speed_mps=0,
+                        rationale="Independent safety braking",
+                    ),
+                    dt,
+                    safety_context,
+                )
+                if aborting or sensor_stale
+                else controller.compute(observed, active_subgoal, dt, ctx)
                 if active_subgoal is not None
                 else Command()
             )
@@ -273,6 +298,7 @@ class SimulationRunner:
                 limits,
                 cfg.max_thrust_n,
                 cfg.max_acceleration_mps2,
+                max_relative_speed_mps=self._relative_speed_cap(truth),
             )
 
             # ---- metrics on truth (physical state), pre-propagation ----
@@ -403,17 +429,31 @@ class SimulationRunner:
             or snapshot.anomaly_context != current_details
         )
         applied = age <= max_age and not fault_changed
+        recovery_subgoal = None
         if applied:
             subgoal, source, fresh_notes = self._bound_plan(subgoal, source, current, observed)
             notes = list(dict.fromkeys(notes + fresh_notes))
         else:
             notes.append(
-                "Response discarded: snapshot expired or fault context changed. Local braking applied."
+                "Response discarded: snapshot expired or fault context changed. Fresh deterministic guidance applied."
             )
+            # A slow provider must not leave the mission repeatedly braking at
+            # every expired response. Use current readings and the same bounds.
+            recovery_input = current.model_copy(
+                update={
+                    "rl_advisor": None,
+                    "rl_advisor_status": "unavailable",
+                    "rl_advisor_reason": "The old policy proposal belongs to the discarded snapshot",
+                }
+            )
+            recovery_subgoal, _, recovery_notes = self._bound_plan(
+                self.heuristic.plan(recovery_input), "heuristic_fallback", recovery_input, observed
+            )
+            notes.extend(recovery_notes)
         self._metrics.total_llm_calls += 1
         if source == "heuristic_fallback":
             self._metrics.llm_fallback_calls += 1
-        self._last_source = source if applied else "local_safety"
+        self._last_source = source if applied else "heuristic_fallback"
         await self._emit(
             PlanningEvent(step=step, sim_time_s=sim_time, provider=source, status="completed")
         )
@@ -428,27 +468,32 @@ class SimulationRunner:
                 priority_change=current.priority_change,
                 metrics_so_far=self._metrics.model_copy(deep=True),
                 rl_advisor=rl_sugg,
+                rl_advisor_status=snapshot.rl_advisor_status,
+                rl_advisor_reason=snapshot.rl_advisor_reason,
                 tool_results=tools,
                 safety_notes=notes,
                 snapshot_step=snapshot.step,
                 snapshot_sim_time_s=snapshot.sim_time_s,
                 plan_age_s=age,
                 applied=applied,
+                recovery_subgoal=recovery_subgoal,
             )
         )
         if not applied:
-            subgoal = LlmSubgoal(
-                target_position_m=observed.position.tolist(),
-                target_velocity_mps=[0, 0, 0],
-                closing_speed_mps=0,
-                rationale="Local braking while fresh guidance is requested.",
-            )
+            subgoal = recovery_subgoal
         return subgoal, applied
 
     def _motion_envelope(self, state: RigidBodyState) -> MotionLimits:
         """Bound applied velocity by speed limits and conservative stopping distance."""
-        cfg = self.request.config
         limits = self.request.secondary.motion_limits.model_copy()
+        cap = self._relative_speed_cap(state)
+        absolute_cap = cap + float(np.linalg.norm(self.request.primary.velocity_mps))
+        limits.max_speed_mps = min(limits.max_speed_mps, absolute_cap)
+        return limits
+
+    def _relative_speed_cap(self, state: RigidBodyState) -> float:
+        """Stopping distance applies to port-relative speed, even for a moving target."""
+        cfg = self.request.config
         distance = float(np.linalg.norm(state.position))
         if distance > 5:
             orbital = (
@@ -470,11 +515,7 @@ class SimulationRunner:
             )
         else:
             cap = min(cfg.near_port_speed_mps, cfg.dock_velocity_tol_mps * 0.95)
-        # Configured envelopes apply to absolute velocity; approach braking is
-        # relative to the primary. A moving primary needs its own velocity offset.
-        absolute_cap = cap + float(np.linalg.norm(self.request.primary.velocity_mps))
-        limits.max_speed_mps = min(limits.max_speed_mps, absolute_cap)
-        return limits
+        return float(cap)
 
     async def _plan(
         self,
@@ -492,7 +533,9 @@ class SimulationRunner:
         # Hybrid mode: ask the trained RL policy for an advisory sub-goal.
         # Model loading/inference must not block SSE, status requests or Stop.
         rl_sugg = (
-            await asyncio.to_thread(self._advisor_suggestion, observed, current_subgoal)
+            await asyncio.to_thread(
+                self._advisor_suggestion, observed, current_subgoal, step, sim_time
+            )
             if self.request.config.rl_advisor_enabled
             else None
         )
@@ -510,6 +553,20 @@ class SimulationRunner:
             anomaly_context=anomaly_details,
             priority_change=priority_change,
             rl_advisor=rl_sugg,
+            rl_advisor_status=(
+                "available"
+                if rl_sugg
+                else "unavailable"
+                if self.request.config.rl_advisor_enabled
+                else "disabled"
+            ),
+            rl_advisor_reason=(
+                self._rl_advisor.last_error
+                if self._rl_advisor and not rl_sugg
+                else "Learned advice was switched off for this session"
+                if not self.request.config.rl_advisor_enabled
+                else None
+            ),
             capture=self._capture(observed),
             primary_limits=self.request.primary.motion_limits.model_dump(),
             secondary_limits=self.request.secondary.motion_limits.model_dump(),
@@ -547,7 +604,9 @@ class SimulationRunner:
         limits = self._motion_envelope(observed)
         relative_limits = MotionLimits(
             max_speed_mps=min(
-                limits.max_speed_mps, self.heuristic.phase_speed_caps.get(inp.phase, 1.0)
+                self._relative_speed_cap(observed),
+                limits.max_speed_mps,
+                self.heuristic.phase_speed_caps.get(inp.phase, 1.0),
             ),
             max_horizontal_speed_mps=limits.max_horizontal_speed_mps,
             max_vertical_speed_mps=limits.max_vertical_speed_mps,
@@ -565,7 +624,14 @@ class SimulationRunner:
             # Minimum is a transit preference, bounded by braking distance and phase limits.
             transit_speed = min(
                 limits.min_speed_mps,
-                np.sqrt(2 * 0.05 * distance_to_goal),
+                np.sqrt(
+                    2
+                    * min(
+                        self.request.config.max_acceleration_mps2,
+                        self.request.config.max_thrust_n / observed.mass_kg,
+                    )
+                    * distance_to_goal
+                ),
                 relative_limits.max_speed_mps,
             )
             if np.linalg.norm(desired_velocity) < transit_speed:
@@ -626,9 +692,11 @@ class SimulationRunner:
         self,
         observed: RigidBodyState,
         current_subgoal: LlmSubgoal | None,
+        step: int = 0,
+        sim_time: float = 0,
     ) -> RlAdvisorSuggestion | None:
         cfg = self.request.config
-        if not cfg.rl_advisor_enabled or self._rl_advisor_unavailable:
+        if not cfg.rl_advisor_enabled:
             return None
         if self._rl_advisor is None:
             self._rl_advisor = RlAdvisor(
@@ -638,8 +706,8 @@ class SimulationRunner:
             )
         baseline = self.heuristic.plan(
             ReasoningInput(
-                step=self._current_step,
-                sim_time_s=self._current_time,
+                step=step,
+                sim_time_s=sim_time,
                 phase=classify_phase(float(np.linalg.norm(observed.position))),
                 range_m=float(np.linalg.norm(observed.position)),
                 position_m=observed.position.tolist(),
@@ -651,8 +719,6 @@ class SimulationRunner:
             )
         )
         suggestion = self._rl_advisor.suggest(observed, baseline)
-        if suggestion is None:
-            self._rl_advisor_unavailable = True  # stop retrying every replan
         return suggestion
 
     # ------------------------------------------------------------------
@@ -789,7 +855,7 @@ class SimulationRunner:
 
     def _capture(self, state):
         cfg = self.request.config
-        return capture_checks(
+        result = capture_checks(
             state,
             cfg.dock_position_tol_m,
             cfg.dock_velocity_tol_mps,
@@ -797,6 +863,10 @@ class SimulationRunner:
             primary_radius=self.request.primary.capture_radius_m,
             secondary_radius=self.request.secondary.capture_radius_m,
         )
+        if getattr(self, "_capture_blocked", False):
+            result["eligible"] = False
+            result["blocked_reason"] = "Mission aborted or sensor readings unavailable"
+        return result
 
     def _is_docked(self, state):
         return self._capture(state)["eligible"]
@@ -822,16 +892,19 @@ class SimulationRunner:
             inertia=inertia,
         )
 
-    @staticmethod
-    def _to_satellite(s: RigidBodyState) -> SatelliteState:
-        return SatelliteState(
-            position_m=[float(v) for v in s.position],
-            velocity_mps=[float(v) for v in s.velocity],
-            orientation_quat=[float(v) for v in s.quat],
-            angular_velocity_radps=[float(v) for v in s.omega],
-            fuel_remaining_pct=s.fuel_pct,
-            mass_kg=s.mass_kg,
-            inertia_kg_m2=[float(v) for v in s.inertia],
+    def _to_satellite(self, s: RigidBodyState) -> SatelliteState:
+        # Summary coordinates remain relative; retain the configured spacecraft metadata.
+        return self.request.secondary.model_copy(
+            update={
+                "position_m": s.position.tolist(),
+                "velocity_mps": s.velocity.tolist(),
+                "orientation_quat": s.quat.tolist(),
+                "angular_velocity_radps": s.omega.tolist(),
+                "fuel_remaining_pct": s.fuel_pct,
+                "mass_kg": s.mass_kg,
+                "inertia_kg_m2": s.inertia.tolist(),
+            },
+            deep=True,
         )
 
 

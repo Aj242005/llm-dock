@@ -16,6 +16,9 @@ training.
 
 from __future__ import annotations
 
+from functools import lru_cache
+from pathlib import Path
+
 import numpy as np
 
 from app.config import get_settings
@@ -24,11 +27,43 @@ from app.schemas.events import LlmSubgoal
 from app.simulation.controllers.base import ControlContext, Controller
 from app.simulation.dynamics import Command, RigidBodyState
 from app.simulation.rl.docking_env import (
+    ACTION_DIM,
     MAX_ACCEL_MPS2,
     MAX_TORQUE_NM,
+    OBS_DIM,
     DockingEnv,
     build_rl_observation,
 )
+
+
+@lru_cache(maxsize=4)
+def _load_policy(model_path, normalize_path, device, model_version, normalize_version):
+    """Reuse frozen inference artifacts; file versions invalidate replaced checkpoints."""
+    import torch
+    from stable_baselines3 import PPO
+    from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+
+    torch.set_num_threads(2)
+    model = PPO.load(model_path, device=device)
+    if model.observation_space.shape != (OBS_DIM,) or model.action_space.shape != (ACTION_DIM,):
+        raise ValueError("Policy requires 14 observations and 6 actuator actions")
+    dummy = DummyVecEnv([lambda: DockingEnv(seed=0)])
+    try:
+        vecnorm = VecNormalize.load(normalize_path, dummy)
+        if not vecnorm.norm_obs or vecnorm.obs_rms.mean.shape != (OBS_DIM,):
+            raise ValueError("Policy requires matching 14-dimensional observation normalization")
+        if (
+            not np.isfinite(vecnorm.obs_rms.mean).all()
+            or not np.isfinite(vecnorm.obs_rms.var).all()
+        ):
+            raise ValueError("Normalization statistics must be finite")
+        if np.any(vecnorm.obs_rms.var < 0):
+            raise ValueError("Normalization variances must be non-negative")
+        vecnorm.training = False
+        vecnorm.norm_reward = False
+        return model, vecnorm
+    finally:
+        dummy.close()
 
 
 class RlController(Controller):
@@ -53,20 +88,14 @@ class RlController(Controller):
                 "`python -m app.simulation.rl.train_ppo` first)"
             )
 
-        import torch
-        from stable_baselines3 import PPO  # deferred: optional dependency
-        from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
-
-        # Small MLP inference is faster with few threads and leaves CPU capacity
-        # for the simulator, event stream and browser.
-        torch.set_num_threads(2)
-
-        self._model = PPO.load(self.model_path, device=device)
-        # VecNormalize.load re-wraps a venv (only used for its spaces/attrs;
-        # the running stats come from the saved pickle).
-        dummy = DummyVecEnv([lambda: DockingEnv(seed=0)])
-        self._vecnorm = VecNormalize.load(self.normalize_path, dummy)
-        self._vecnorm.training = False  # freeze the running stats at inference
+        model_file, normalize_file = (
+            Path(self.model_path).resolve(),
+            Path(self.normalize_path).resolve(),
+        )
+        versions = [(p.stat().st_mtime_ns, p.stat().st_size) for p in (model_file, normalize_file)]
+        self._model, self._vecnorm = _load_policy(
+            str(model_file), str(normalize_file), device, *versions
+        )
 
     def compute(
         self, state: RigidBodyState, subgoal: LlmSubgoal, dt: float, ctx: ControlContext
@@ -74,7 +103,10 @@ class RlController(Controller):
         obs = build_rl_observation(state, subgoal)[np.newaxis, :].astype(np.float32)
         obs_norm = self._vecnorm.normalize_obs(obs)
         action, _ = self._model.predict(obs_norm, deterministic=True)
-        a = np.clip(np.asarray(action[0], dtype=float), -1.0, 1.0)
+        a = np.asarray(action[0], dtype=float)
+        if a.shape != (ACTION_DIM,) or not np.isfinite(a).all():
+            raise ValueError("Policy returned an invalid actuator command")
+        a = np.clip(a, -1.0, 1.0)
 
         accel = a[:3] * MAX_ACCEL_MPS2
         torque = a[3:] * MAX_TORQUE_NM

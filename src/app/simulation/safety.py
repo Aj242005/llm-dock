@@ -56,6 +56,7 @@ def enforce_command(
     limits,
     max_thrust_n=86.6025403784,
     max_acceleration_mps2=1.0,
+    max_relative_speed_mps=None,
 ):
     """Adjust force before propagation; never silently clip the physical state."""
     primary_velocity = np.asarray(primary_velocity)
@@ -68,7 +69,12 @@ def enforce_command(
     # Brake toward the envelope when it narrows. Holding the current velocity
     # would leave no feasible baseline once the stopping-distance cap decreases.
     absolute_velocity = state.velocity + primary_velocity
-    desired_acceleration = (limit_velocity(absolute_velocity, limits) - absolute_velocity) / dt
+    desired_velocity = limit_velocity(absolute_velocity, limits) - primary_velocity
+    if max_relative_speed_mps is not None:
+        speed = np.linalg.norm(desired_velocity)
+        if speed > max_relative_speed_mps:
+            desired_velocity *= max_relative_speed_mps / speed
+    desired_acceleration = (desired_velocity - state.velocity) / dt
     acceleration_magnitude = float(np.linalg.norm(desired_acceleration))
     if acceleration_magnitude > max_acceleration_mps2:
         desired_acceleration *= max_acceleration_mps2 / acceleration_magnitude
@@ -80,8 +86,14 @@ def enforce_command(
     def feasible(candidate):
         velocity = state.velocity + (drift + candidate / state.mass_kg) * dt + primary_velocity
         acceleration = drift + candidate / state.mass_kg
-        return np.linalg.norm(acceleration) <= max_acceleration_mps2 + 1e-9 and np.allclose(
-            velocity, limit_velocity(velocity, limits), atol=1e-9, rtol=0
+        relative_ok = (
+            max_relative_speed_mps is None
+            or np.linalg.norm(velocity - primary_velocity) <= max_relative_speed_mps + 1e-9
+        )
+        return (
+            relative_ok
+            and np.linalg.norm(acceleration) <= max_acceleration_mps2 + 1e-9
+            and np.allclose(velocity, limit_velocity(velocity, limits), atol=1e-9, rtol=0)
         )
 
     # Bisection stays within both the convex velocity envelope and actuator bounds.

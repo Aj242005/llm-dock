@@ -176,12 +176,15 @@ class LlmDecisionEvent(StreamEventBase):
     # The RL policy's advisory suggestion the planner saw (when enabled), so
     # the stream shows what the RL agent proposed vs what the planner chose.
     rl_advisor: RlAdvisorSuggestion | None = None
+    rl_advisor_status: Literal["disabled", "available", "unavailable"] = "disabled"
+    rl_advisor_reason: str | None = None
     tool_results: list[dict] = Field(default_factory=list)
     safety_notes: list[str] = Field(default_factory=list)
     snapshot_step: int = Field(default=0, ge=0)
     snapshot_sim_time_s: float = Field(default=0.0, ge=0.0)
     plan_age_s: float = Field(default=0.0, ge=0.0)
     applied: bool = True
+    recovery_subgoal: LlmSubgoal | None = None
 
 
 class PlanningEvent(StreamEventBase):

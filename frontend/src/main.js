@@ -285,7 +285,7 @@ async function request(url, body) {
 function renderDecision(event) {
   $("planner-status").textContent =
     event.applied === false
-      ? "Delayed response discarded · local braking"
+      ? "Delayed response discarded · fresh deterministic guidance"
       : event.source === "heuristic_fallback"
         ? "Provider call failed · deterministic fallback applied"
         : `Plan received from ${event.source} · ${(event.plan_age_s || 0).toFixed(1)} s snapshot age`;
@@ -296,7 +296,16 @@ function renderDecision(event) {
   }
   $("scene-state").textContent = "Live telemetry";
   $("latest-rl").textContent =
-    event.subgoal.rl_assessment || "No learned assessment supplied.";
+    (event.rl_advisor
+      ? "Verified: a trained PPO proposal was supplied. "
+      : event.rl_advisor_status === "disabled"
+        ? "Learned advice was switched off for this session. "
+        : `Policy unavailable: ${event.rl_advisor_reason || "Check the server log"}. `) +
+    (event.subgoal.rl_assessment || "No learned assessment supplied.");
+  if (event.recovery_subgoal) {
+    $("latest-rationale").textContent +=
+      ` Current recovery maneuver: ${event.recovery_subgoal.rationale}`;
+  }
   $("latest-alternatives").replaceChildren();
   for (const alternative of event.subgoal.alternatives || []) {
     const item = document.createElement("li");
@@ -322,6 +331,9 @@ function renderDecision(event) {
     {
       tools: event.tool_results,
       learned_advice: event.rl_advisor || "No learned advice used",
+      learned_advice_status: event.rl_advisor_status,
+      learned_advice_reason: event.rl_advisor_reason,
+      recovery_maneuver: event.recovery_subgoal,
       snapshot_time_s: event.snapshot_sim_time_s,
       age_s: event.plan_age_s,
       applied: event.applied,
@@ -526,6 +538,7 @@ $("export").onclick = () => {
 };
 $("reset").onclick = () => {
   $("mission-form").reset();
+  updateRlStatus();
   clearExplanation();
   $("decisions").replaceChildren();
   decisionCount = 0;
@@ -581,6 +594,13 @@ $("randomize").onclick = () => {
 };
 captureView();
 preview();
+function updateRlStatus() {
+  if (!$("rl-advisor").disabled)
+    $("rl-status").textContent = $("rl-advisor").checked
+      ? "Trained policy verified · advice enabled for the next session."
+      : "Advice switched off · the planner will receive no learned proposal.";
+}
+$("rl-advisor").addEventListener("change", updateRlStatus);
 request("/api/v1/capabilities")
   .then((data) => {
     $("connection").textContent = "Backend connected";
@@ -591,10 +611,11 @@ request("/api/v1/capabilities")
     $("model").placeholder =
       data.default_models?.[$("provider").value] || "Use server default";
     $("rl-advisor").disabled = !data.rl_available;
+    $("rl-advisor").checked = data.rl_available;
+    $("rl-advisor").defaultChecked = data.rl_available;
     $("controller").querySelector('[value="rl"]').disabled = !data.rl_available;
-    $("rl-status").textContent = data.rl_available
-      ? "Trained policy available on the server."
-      : "Train in Kaggle and configure the policy paths to enable learned advice.";
+    $("rl-status").textContent = data.rl_reason || "No trained policy available.";
+    updateRlStatus();
   })
   .catch((error) => {
     $("connection").textContent = "Backend unavailable";

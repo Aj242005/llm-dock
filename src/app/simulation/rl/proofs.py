@@ -21,11 +21,13 @@ from app.sessions.store import Session
 from app.simulation.runner import SimulationRunner
 
 
-async def evaluate(directory, episodes, start_seed, checkpoint):
+async def evaluate(directory, episodes, start_seed, checkpoint, normalize_path=None):
     import os
 
     os.environ["LLM_DOCKING_RL_MODEL_PATH"] = str(directory / f"{checkpoint}.zip")
-    os.environ["LLM_DOCKING_RL_NORMALIZE_PATH"] = str(directory / "ppo_dock_vecnormalize.pkl")
+    os.environ["LLM_DOCKING_RL_NORMALIZE_PATH"] = str(
+        normalize_path or directory / f"{checkpoint}_vecnormalize.pkl"
+    )
     get_settings.cache_clear()
     rows = []
     for controller, advisor in [("lqr", False), ("pid", False), ("rl", False), ("lqr", True)]:
@@ -113,11 +115,19 @@ def main():
     parser.add_argument("--episodes", type=int, default=30)
     parser.add_argument("--start-seed", type=int, default=50000)
     parser.add_argument("--checkpoint", default="ppo_dock")
+    parser.add_argument(
+        "--normalize", type=Path, help="Matching VecNormalize file for a non-default checkpoint"
+    )
     args = parser.parse_args()
     if args.episodes < 1:
         parser.error("At least one held-out episode is required")
     directory = args.run_dir
-    rows = asyncio.run(evaluate(directory, args.episodes, args.start_seed, args.checkpoint))
+    normalize = args.normalize or directory / f"{args.checkpoint}_vecnormalize.pkl"
+    if not normalize.is_file():
+        parser.error("Specify --normalize with the checkpoint's matching VecNormalize file")
+    rows = asyncio.run(
+        evaluate(directory, args.episodes, args.start_seed, args.checkpoint, normalize)
+    )
     aggregates = []
     for controller, advisor in [("lqr", False), ("pid", False), ("rl", False), ("lqr", True)]:
         trials = [r for r in rows if r["controller"] == controller and r["rl_advisor"] == advisor]

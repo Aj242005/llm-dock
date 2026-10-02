@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -45,22 +44,24 @@ _SSE_POLL_TIMEOUT_S = 0.5
     summary="Start a docking simulation",
 )
 async def start_simulation(request: Request, body: SimulateRequest) -> SimulateResponse:
+    await _validate_controller_ready(body)
     if sum(not s.finished.is_set() for s in store._sessions.values()) >= 4:
         raise HTTPException(
             status_code=429, detail="Four sessions are active; stop one before starting another"
         )
-    _validate_controller_ready(body)
     from app.llm.reasoning_agent import provider_has_key
 
     provider = body.config.provider or get_settings().mode
-    if not provider_has_key(provider):
+    if body.config.llm_enabled and not provider_has_key(provider):
         raise HTTPException(
             status_code=400, detail=f"Configure a server-side API key for {provider}"
         )
     session = await store.create()
     session.stream_pacing_s = body.config.stream_pacing_s
     try:
-        runner = SimulationRunner(session=session, request=body)
+        # Provider imports and client setup can be slow on first use. Keep
+        # existing simulations and SSE clients moving while preparing this one.
+        runner = await asyncio.to_thread(SimulationRunner, session=session, request=body)
     except (ValueError, ImportError) as exc:
         await store.close(session.session_id)
         raise HTTPException(status_code=400, detail=str(exc)) from None
@@ -138,6 +139,9 @@ async def capabilities():
     from app.llm.reasoning_agent import provider_has_key
 
     settings = get_settings()
+    from app.llm.rl_advisor import rl_readiness
+
+    readiness = await asyncio.to_thread(rl_readiness)
     return {
         "providers": {
             p: provider_has_key(p)
@@ -145,12 +149,8 @@ async def capabilities():
         },
         "default_provider": settings.mode,
         "default_models": {"vertex": settings.llm_model_vertex},
-        "rl_available": bool(
-            settings.rl_model_path
-            and settings.rl_normalize_path
-            and os.path.isfile(settings.rl_model_path)
-            and os.path.isfile(settings.rl_normalize_path)
-        ),
+        "rl_available": readiness["available"],
+        "rl_reason": readiness["reason"],
         "capture_range_m": 1.25,
     }
 
@@ -197,7 +197,7 @@ async def _get_session(session_id: str) -> Session:
     return session
 
 
-def _validate_controller_ready(body: SimulateRequest) -> None:
+async def _validate_controller_ready(body: SimulateRequest) -> None:
     """Fail fast (400) when the requested run needs RL artifacts it hasn't got.
 
     Both ``controller="rl"`` and ``rl_advisor_enabled=True`` require the
@@ -206,16 +206,10 @@ def _validate_controller_ready(body: SimulateRequest) -> None:
     needs_rl = body.config.controller is ControllerType.RL or body.config.rl_advisor_enabled
     if not needs_rl:
         return
-    settings = get_settings()
-    missing = [
-        name
-        for name, path in (
-            ("LLM_DOCKING_RL_MODEL_PATH", settings.rl_model_path),
-            ("LLM_DOCKING_RL_NORMALIZE_PATH", settings.rl_normalize_path),
-        )
-        if not path or not os.path.isfile(path)
-    ]
-    if missing:
+    from app.llm.rl_advisor import rl_readiness
+
+    readiness = await asyncio.to_thread(rl_readiness)
+    if not readiness["available"]:
         reason = (
             "controller='rl'"
             if body.config.controller is ControllerType.RL
@@ -223,9 +217,5 @@ def _validate_controller_ready(body: SimulateRequest) -> None:
         )
         raise HTTPException(
             status_code=400,
-            detail=(
-                f"{reason} requires a trained policy: set "
-                + " and ".join(missing)
-                + " (train with `python -m app.simulation.rl.train_ppo`)"
-            ),
+            detail=(f"{reason} requires a working trained policy: {readiness['reason']}"),
         )

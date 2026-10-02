@@ -46,6 +46,8 @@ def docking_tools(snapshot):
         """Read the learned PPO policy proposal, if a trained model is configured."""
         return {
             "available": snapshot.rl_advisor is not None,
+            "status": "available" if snapshot.rl_advisor else snapshot.rl_advisor_status,
+            "reason": snapshot.rl_advisor_reason,
             "proposal": snapshot.rl_advisor.model_dump() if snapshot.rl_advisor else None,
         }
 

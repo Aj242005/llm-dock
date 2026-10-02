@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-02T16:21:15Z",
+  "title": "Design System: Docking Lab",
+  "extensions": {
+    "motion": [
+      {
+        "name": "control-transition",
+        "value": "160ms",
+        "purpose": "Button background and border-color feedback and field border-color feedback; disabled for reduced motion."
+      },
+      {
+        "name": "control-easing",
+        "value": "ease",
+        "purpose": "CSS default easing used by the 160ms control transitions."
+      },
+      {
+        "name": "spacecraft-damping",
+        "value": "1 - exp(-seconds * 18)",
+        "purpose": "Time-based position lerp and attitude slerp toward measured telemetry only; no extrapolation; blend becomes 1 for reduced motion."
+      },
+      {
+        "name": "camera-damping",
+        "value": "1 - exp(-seconds * 5)",
+        "purpose": "Automatic camera position and target changes; blend becomes 1 for reduced motion."
+      },
+      {
+        "name": "render-frame-delta-cap",
+        "value": "50ms",
+        "purpose": "Bounds elapsed time used for exponential damping; rendering returns early when offscreen or document hidden."
+      },
+      {
+        "name": "capture-confirmation-duration",
+        "value": "550ms",
+        "purpose": "Single clip-path and opacity reveal after the server terminal docked event; disabled for reduced motion."
+      },
+      {
+        "name": "capture-confirmation-easing",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Exponential ease-out for the capture confirmation reveal."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1500px"
+      },
+      {
+        "name": "compact",
+        "value": "1150px"
+      },
+      {
+        "name": "mobile",
+        "value": "700px"
+      },
+      {
+        "name": "sticky-controls-min",
+        "value": "701px"
+      }
+    ],
+    "shadows": [
+      {
+        "name": "capture-confirmation",
+        "value": "0 10px 28px #0005",
+        "purpose": "Sole raised interface surface, shown only for the server-confirmed completed capture."
+      }
+    ],
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Workspace heading",
+        "purpose": "Responsive 400-weight main heading; locally hosted IBM Plex Sans."
+      },
+      "headline-mobile": {
+        "displayName": "Mobile workspace heading",
+        "purpose": "31px heading through the 700px mobile breakpoint."
+      },
+      "instrument": {
+        "displayName": "Telemetry instrument",
+        "purpose": "Tabular measured values, 26px by default, 20px in the compact layout, and 24px on mobile."
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Start a docking session",
+      "html": "<button class='ds-primary' type='button'><svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><polygon points='6 3 20 12 6 21 6 3'></polygon></svg>Start docking session</button>",
+      "css": ".ds-primary{font:600 12px 'IBM Plex Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:9px;width:100%;border-radius:5px;padding:11px 12px;cursor:pointer;transition:background .16s,border-color .16s;background:var(--accent,#8fd9c4);color:#112820;border:1px solid var(--accent,#8fd9c4)}.ds-primary:not(:disabled):hover{background:#b6efde}.ds-primary:focus-visible{outline:2px solid var(--accent,#8fd9c4);outline-offset:3px}.ds-primary:disabled{cursor:default;opacity:.45}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+    },
+    {
+      "name": "Secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Stop a session or export its evidence; the capture action uses a smaller fitted-width variant.",
+      "html": "<button class='ds-secondary' type='button'><svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'></path><polyline points='7 10 12 15 17 10'></polyline><line x1='12' x2='12' y1='15' y2='3'></line></svg>Export session evidence</button>",
+      "css": ".ds-secondary{font:400 12px 'IBM Plex Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:9px;width:100%;border-radius:5px;padding:11px 12px;cursor:pointer;transition:background .16s,border-color .16s;background:transparent;color:#d3e0e6;border:1px solid #4b616d}.ds-secondary:not(:disabled):hover{background:#263941;border-color:var(--muted,#a0b3be)}.ds-secondary:focus-visible{outline:2px solid var(--accent,#8fd9c4);outline-offset:3px}.ds-secondary:disabled{cursor:default;opacity:.45}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+    },
+    {
+      "name": "Numeric field",
+      "kind": "input",
+      "description": "Native numeric fields pair values with units. XYZ position fields use arbitrary decimal steps and a 100m default secondary X; allowed initial separation is the primary-relative Euclidean distance within the selected 2cm to 1km band.",
+      "html": "<label class='ds-label'>Capture range <span>m</span><input class='ds-input' type='number' value='1.25' min='0.01' max='1.25' step='0.01' required></label>",
+      "css": ".ds-label{display:block;margin-bottom:12px;font:400 11px 'IBM Plex Sans',sans-serif;color:var(--muted,#a0b3be)}.ds-label>span{float:right;font-size:10px}.ds-input{display:block;width:100%;min-width:0;margin-top:6px;background:#101b22;color:#e5edf1;border:1px solid #40545f;border-radius:5px;padding:8px 9px;font:400 12px 'IBM Plex Sans',sans-serif;font-variant-numeric:tabular-nums;caret-color:var(--accent,#8fd9c4);transition:border-color .16s}.ds-input:hover{border-color:#78909d}.ds-input:focus-visible{outline:2px solid var(--accent,#8fd9c4);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-input{transition:none}}"
+    },
+    {
+      "name": "Phase tag",
+      "kind": "chip",
+      "description": "Current simulation phase",
+      "html": "<span class='ds-phase'>Final approach</span>",
+      "css": ".ds-phase{font:400 11px 'IBM Plex Sans',sans-serif;color:var(--accent,#8fd9c4);border:1px solid #3c645b;border-radius:4px;padding:4px 8px}"
+    },
+    {
+      "name": "Capture check",
+      "kind": "custom",
+      "description": "One of four capture conditions; a checked icon and mint text identify a passed check.",
+      "html": "<div class='ds-check ds-passed'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='12' cy='12' r='10'></circle><path d='m9 12 2 2 4-4'></path></svg>Shared port range</div>",
+      "css": ".ds-check{display:flex;align-items:center;gap:7px;font:400 11px 'IBM Plex Sans',sans-serif;color:var(--muted,#a0b3be)}.ds-check.ds-passed{color:var(--accent,#8fd9c4)}@media(max-width:700px){.ds-check{font-size:10px}}"
+    },
+    {
+      "name": "API reference link",
+      "kind": "nav",
+      "description": "Header inspection link that stays available on mobile.",
+      "html": "<a class='ds-api' href='/docs' target='_blank' rel='noreferrer'>API reference<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M7 7h10v10'></path><path d='M7 17 17 7'></path></svg></a>",
+      "css": ".ds-api{display:flex;align-items:center;gap:6px;font:400 12px 'IBM Plex Sans',sans-serif;color:#e5edf1;text-decoration:none;text-underline-offset:4px}.ds-api:focus-visible{outline:2px solid var(--accent,#8fd9c4);outline-offset:3px}"
+    },
+    {
+      "name": "Guidance entry",
+      "kind": "card",
+      "description": "A flat log entry with source, simulation time, request-time rationale, and native expandable tool evidence including snapshot time, age, and applied flag. Discarded proposals retain their explanation and receive explicit discarded labels; status states 'Delayed response discarded · fresh deterministic guidance'. Fresh bounded deterministic guidance uses current measurements and excludes the stale learned proposal. The event supplies recovery_subgoal separately; its rationale appears after 'Current recovery maneuver:' in the latest explanation, and tool evidence exposes it as recovery_maneuver. The learned-advice control starts disabled during actual policy load and inference verification, then becomes enabled and checked by default when verified; Reset restores that verified default. Switching it off explicitly states that the planner will receive no learned proposal. Every latest learned assessment begins with a verified proposal statement or the disabled/unavailable reason; tool evidence records learned_advice_status and learned_advice_reason beside the actual proposal or 'No learned advice used'. Current telemetry continues while the provider plans.",
+      "html": "<article class='ds-decision'><div class='ds-top'><span class='ds-source'>deterministic planner</span><span>0.0 s &#183; step 0</span></div><h3>Final approach</h3><p>Planner rationale from its request-time snapshot.</p><details><summary>Tools &amp; learned advice</summary><pre>{}</pre></details></article>",
+      "css": ".ds-decision{background:var(--surface,#162128);padding:0 0 20px;margin-bottom:20px;border-bottom:1px solid var(--line,#30424d);color:#e5edf1;font-family:'IBM Plex Sans',sans-serif}.ds-top{display:flex;justify-content:space-between;font-size:10px;color:var(--muted,#a0b3be);margin-bottom:10px}.ds-source{color:var(--accent,#8fd9c4)}.ds-decision h3{font-size:12px;font-weight:500;margin:0 0 9px;line-height:1.5}.ds-decision p{font-size:12px;color:#c5d2da;line-height:1.65;margin:0}.ds-decision details{padding:10px 0 0;border-top:0}.ds-decision summary{font-size:11px;font-weight:400;color:var(--blue,#90b9e9);margin-bottom:9px;cursor:pointer}.ds-decision summary:focus-visible{outline:2px solid var(--accent,#8fd9c4);outline-offset:3px}.ds-decision pre{white-space:pre-wrap;word-break:break-word;font-size:10px;color:#b5c6d1;line-height:1.65;margin:0}"
+    },
+    {
+      "name": "Camera view selector",
+      "kind": "nav",
+      "refersTo": "camera-segment",
+      "description": "Four scene views: Track chaser, ISS + chaser (default), Full ISS, and Target port. Native pressed states identify selection; drag orbits the spacecraft and grid together, and a camera selection resumes automatic placement. Overview and Full ISS fit physical bounds using a bounding sphere, the limiting horizontal or vertical half field of view, and 1.25 padding; resize and NASA ISS loading refit the selected mode. Chaser tracking frames both ports below 10m or after capture.",
+      "html": "<div class='ds-camera' role='group' aria-label='Camera view'><button type='button' aria-pressed='false'>Track chaser</button><button type='button' aria-pressed='true'>ISS + chaser</button><button type='button' aria-pressed='false'>Full ISS</button><button type='button' aria-pressed='false'>Target port</button></div>",
+      "css": ".ds-camera{display:inline-flex;gap:3px;background:#10191f;border:1px solid var(--line,#30424d);border-radius:5px;padding:4px;white-space:nowrap}.ds-camera button{font:400 11px 'IBM Plex Sans',sans-serif;background:transparent;color:#c6d5e2;border:0;border-radius:3px;padding:8px 11px;min-height:36px;cursor:pointer}.ds-camera button:hover{background:#263941}.ds-camera button[aria-pressed=\"true\"]{background:var(--accent,#8fd9c4);color:#112820;font-weight:500}.ds-camera button:focus-visible{outline:2px solid var(--accent,#8fd9c4);outline-offset:3px}@media(max-width:700px){.ds-camera button{padding:8px}}"
+    },
+    {
+      "name": "Scene overlays and coordinate grid",
+      "kind": "custom",
+      "description": "Native controls for measured trail, velocity arrow, capture envelopes, and the shared fixed local XYZ grid. Auto spacing uses 10cm below 1m, 1m below 10m, 10m through 200m, and 100m above 200m; five fixed spacings cover 1cm to 100m. The three translucent planes meet at the primary PMA-2 port origin, with X warm red, Y mint, and Z blue plus axis letters. The output states current division size. NASA ISS loading status occupies its own line; asset failure retains the labelled schematic target.",
+      "html": "<div class='ds-overlays' role='group' aria-label='Scene overlays'><label><input type='checkbox' checked>Flight trail</label><label><input type='checkbox' checked>Velocity</label><label><input type='checkbox' checked>Capture envelope</label></div><div class='ds-coordinate' role='group' aria-label='3D coordinate grid'><label><input type='checkbox' checked>3D grid</label><label>Grid spacing<select><option value='auto'>Auto &#183; metres</option><option value='0.01'>1 cm</option><option value='0.1'>10 cm</option><option value='1'>1 m</option><option value='10'>10 m</option><option value='100'>100 m</option></select></label><span class='ds-axis-legend'><b class='ds-axis-x'>X</b><b class='ds-axis-y'>Y</b><b class='ds-axis-z'>Z</b></span><output>10 m per division &#183; drag to rotate</output><span class='ds-iss-status' role='status' data-state='ready'>ISS model &#183; NASA</span></div>",
+      "css": ".ds-overlays{display:flex;align-items:center;gap:18px;background:var(--surface,#162128);padding:12px 20px;border-bottom:1px solid var(--line,#30424d);font:400 10px 'IBM Plex Sans',sans-serif;color:var(--muted,#a0b3be)}.ds-overlays label{display:flex;align-items:center;gap:6px;margin:0;font-size:10px;color:#d3e0e6;cursor:pointer}.ds-overlays input{width:12px;height:12px;margin:0;accent-color:var(--accent,#8fd9c4)}.ds-coordinate{display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px;background:var(--surface,#162128);padding:12px 20px;border-bottom:1px solid var(--line,#30424d);font:400 11px 'IBM Plex Sans',sans-serif;color:var(--muted,#a0b3be)}.ds-coordinate label{display:flex;align-items:center;gap:8px;margin:0}.ds-coordinate input{width:auto;margin:0;accent-color:var(--accent,#8fd9c4)}.ds-coordinate select{width:auto;min-width:0;margin:0;padding:6px 8px;background:#101b22;border:1px solid #40545f;border-radius:5px;color:#e5edf1;font:400 12px 'IBM Plex Sans',sans-serif;transition:border-color .16s}.ds-coordinate select:hover{border-color:#78909d}.ds-overlays input:focus-visible,.ds-coordinate input:focus-visible,.ds-coordinate select:focus-visible{outline:2px solid var(--accent,#8fd9c4);outline-offset:3px}.ds-axis-legend{display:flex;gap:10px}.ds-axis-x{color:#ffb1a5}.ds-axis-y{color:var(--accent,#8fd9c4)}.ds-axis-z{color:var(--blue,#90b9e9)}.ds-iss-status{flex-basis:100%;color:var(--blue,#90b9e9)}.ds-iss-status[data-state=\"error\"]{color:#ffb1a5}@media(max-width:700px){.ds-overlays{flex-wrap:wrap;gap:12px;padding:14px}.ds-overlays label{min-height:24px}}@media(prefers-reduced-motion:reduce){.ds-coordinate select{transition:none}}",
+      "refersTo": "grid-spacing-select"
+    },
+    {
+      "name": "Capture confirmation",
+      "kind": "custom",
+      "refersTo": "capture-confirmation",
+      "description": "Shown only after the server terminal docked event; the runtime supplies measured final range and relative speed.",
+      "html": "<div class='ds-confirmation' role='status'><svg width='27' height='27' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='12' cy='12' r='10'></circle><path d='m9 12 2 2 4-4'></path></svg><div><strong>Docking capture confirmed.</strong><span>All capture conditions satisfied.</span></div></div>",
+      "css": ".ds-confirmation{display:flex;align-items:center;gap:14px;background:#162d27;padding:18px 20px;border-radius:5px;box-shadow:0 10px 28px #0005;font-family:'IBM Plex Sans',sans-serif;animation:ds-capture-confirm 550ms cubic-bezier(0.16,1,0.3,1)}.ds-confirmation svg{width:27px;height:27px;color:var(--accent,#8fd9c4);flex-shrink:0}.ds-confirmation strong{display:block;color:#d5f5e9;font-size:20px;font-weight:500;letter-spacing:-.02em}.ds-confirmation span{display:block;color:#b9dbcf;font-size:11px;margin-top:5px}@keyframes ds-capture-confirm{from{clip-path:inset(0 0 100% 0);opacity:.6}to{clip-path:inset(0 0 0 0);opacity:1}}@media(max-width:700px){.ds-confirmation{padding:14px;gap:10px}.ds-confirmation strong{font-size:17px}}@media(prefers-reduced-motion:reduce){.ds-confirmation{animation:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Flight-operations workbench",
+    "overview": "The research flight-operations dashboard keeps its graphite, mint, and blue identity. Larger typography, a NASA ISS primary, and a concept chaser give the relative flight scene more presence. Configuration, capture, and guidance stay readable beside the scene so researchers can compare commands with measured effects. The shared XYZ grid makes the same local port coordinates visible from centimetres to hundreds of metres per division.\n\nMotion follows backend measurements and continues while provider guidance is pending. Planning status and decision snapshot provenance remain readable beside current telemetry. A separate, labelled illustrative Earth and static star field frame the spacecraft. Controls remain stable, native, and task-focused; the only authored confirmation animation follows a server-verified capture.",
+    "keyCharacteristics": [
+      "Explicit SI units",
+      "Readable tool evidence",
+      "Stable control surfaces",
+      "Spatial telemetry",
+      "Shared XYZ coordinates at true metre scale",
+      "Measured motion with a labelled illustrative backdrop",
+      "Visible guidance state and decision snapshot provenance"
+    ],
+    "rules": [],
+    "dos": [
+      "Do show units beside every configurable quantity and measurement.",
+      "Do keep numerical telemetry tied to backend events.",
+      "Do label the deterministic planner and provider fallback honestly.",
+      "Do keep planning activity, current telemetry, and request-time reasoning separately labelled.",
+      "Do expose decision snapshot age and whether a returned proposal was applied or discarded.",
+      "Do distinguish a verified learned proposal from disabled or unavailable advice before showing the planner's assessment.",
+      "Do retain discarded proposal evidence and label fresh deterministic recovery from current measurements separately.",
+      "Do preserve standard form semantics and reduced-motion behavior.",
+      "Do identify the NASA ISS, concept chaser, fallback target, and illustrative scenery explicitly.",
+      "Do share the local coordinate frame and true metre scale across models, grid, and telemetry.",
+      "Do keep grid spacing and visibility in native labelled controls, with the current division size visible.",
+      "Do fit full-scene cameras from physical bounds and the limiting field of view when the canvas resizes.",
+      "Do reserve capture confirmation for the server's terminal docked event."
+    ],
+    "donts": [
+      "Don't use animation to conceal latency or invent a physical outcome.",
+      "Don't turn an observed success rate into an unqualified accuracy guarantee."
+    ]
+  }
+}

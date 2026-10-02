@@ -185,6 +185,24 @@ simulation time, short explanations, and expandable tool/alternative details.
 Empty and error states explain the next action. Keyboard focus is a two-pixel
 mint outline with a three-pixel offset.
 
+### Learned PPO advice
+
+The native "Use learned PPO advice" checkbox starts disabled while the help
+states "Checking for a trained policy…". The capability check uses actual policy
+loading and inference. A verified policy enables and checks the control by
+default, with "Trained policy verified · advice enabled for the next session."
+Reset restores that verified availability default through the checkbox's
+defaultChecked state. An unavailable policy leaves the control disabled and
+unchecked, with its reason beside the field. Switching advice off states
+"Advice switched off · the planner will receive no learned proposal."
+
+Every latest learned assessment begins with "Verified: a trained PPO proposal
+was supplied.", "Learned advice was switched off for this session.", or
+"Policy unavailable:" followed by the reason. The planner's assessment follows
+that availability statement. "Tools & learned advice" records the actual learned
+proposal or "No learned advice used", plus learned_advice_status and
+learned_advice_reason, so availability and the planner's judgment remain distinct.
+
 ### Guidance and continuous motion
 
 The existing explanation panel and flat decision log carry planning activity;
@@ -201,9 +219,17 @@ Received decisions report their snapshot age in simulated seconds. Expandable
 "Tools & learned advice" evidence includes the request snapshot time, age, and
 applied flag. The latest rationale, learned assessment, alternatives, and tool
 results come from that decision's request-time snapshot; they can describe an
-earlier measured state than the current instruments. A proposal outside its age
-budget or with a changed fault context is labelled "discarded" and "Discarded
-proposal"; the status states "Delayed response discarded · local braking".
+earlier measured state than the current instruments. The latest rationale also
+appends current safety adjustments and any separately labelled recovery maneuver.
+A proposal outside its age budget or with a changed fault context is labelled
+"discarded" and "Discarded proposal"; the status states "Delayed response
+discarded · fresh deterministic guidance". Fresh deterministic guidance is
+generated from current measurements and checked against current limits. The
+decision event preserves the discarded proposal and supplies recovery_subgoal
+separately. Its rationale follows "Current recovery maneuver:" in the latest
+explanation, and "Tools & learned advice" exposes it as recovery_maneuver beside
+the original snapshot time, age, and applied flag. The stale learned proposal is
+excluded from the recovery input.
 Accepted proposals are checked against current limits, with safety adjustments
 appended as "Applied limits". Stop and terminal events end the session and its
 pending request; the command status then reads "Last applied command · session
@@ -293,6 +319,8 @@ from its rendered width so text retains its size.
 - Do label the deterministic planner and provider fallback honestly.
 - Do keep planning activity, current telemetry, and request-time reasoning separately labelled.
 - Do expose decision snapshot age and whether a returned proposal was applied or discarded.
+- Do distinguish a verified learned proposal from disabled or unavailable advice before showing the planner's assessment.
+- Do retain discarded proposal evidence and label fresh deterministic recovery from current measurements separately.
 - Do preserve standard form semantics and reduced-motion behavior.
 - Do identify the NASA ISS, concept chaser, fallback target, and illustrative scenery explicitly.
 - Do share the local coordinate frame and true metre scale across models, grid, and telemetry.

@@ -7,7 +7,6 @@ PID, LQR, and the RL/PPO policy controller are interchangeable behind
 from app.simulation.controllers.base import ControlContext, Controller, build_controller
 from app.simulation.controllers.lqr import LqrController
 from app.simulation.controllers.pid import PidController
-from app.simulation.controllers.rl import RlController
 
 __all__ = [
     "Controller",
@@ -15,5 +14,4 @@ __all__ = [
     "build_controller",
     "LqrController",
     "PidController",
-    "RlController",
 ]

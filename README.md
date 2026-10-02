@@ -104,10 +104,15 @@ session export are saved in `.impeccable/review/`.
    The right panel displays the latest natural-language explanation, learned
    advice assessment, applied limits, and alternatives above the decision history.
    Tools inspect or preview; only the runner applies actuator commands.
-4. Optional PPO advice uses the same observation definition as training.
+4. PPO advice is enabled by default in the dashboard when a real load and
+   inference probe succeeds. Switching it off is explicit. Every decision
+   reports available, disabled, or unavailable, with the proposal and reason.
+   It uses the same observation definition as training.
    The deterministic fallback adopts safe inward velocity advice while keeping
    a port-directed waypoint. The LLM receives the full learned proposal and
    can adopt, cap, or reject it. The log shows tool readings and actual sources.
+   An expired provider response is discarded; fresh deterministic guidance
+   from the current state sustains the approach while Vertex replans.
 5. Commands pass through per-axis force/torque, total thrust, acceleration,
    configured velocity limits, and the stopping-distance envelope.
    When no bounded force can maintain a limit after a disturbance, the run
@@ -125,6 +130,9 @@ results. The physics is a local linearized model; fuel is simplified. Contact
 mechanics, body collision, sensor estimation, structural dynamics, actual
 communications latency, and flight hardware are outside this simulator.
 **This is research software, not flight-certified software.**
+
+The live-session code audit, regression results, original reference run, and
+verified Vertex-with-PPO trace are in [`proofs/code-audit/README.md`](proofs/code-audit/README.md).
 
 ## Providers
 

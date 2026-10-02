@@ -1,0 +1,14 @@
+{
+  "tests": {
+    "passed": 126,
+    "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -p pytest_asyncio.plugin -q -o faulthandler_timeout=30"
+  },
+  "ruff": "passed",
+  "npm_audit": {
+    "vulnerabilities": 0,
+    "scope": "all frontend dependencies"
+  },
+  "frontend_build": "passed; Three.js 536.31 kB chunk warning",
+  "notebook_embedded_files": 32,
+  "historical_proof_hashes": "all passed"
+}

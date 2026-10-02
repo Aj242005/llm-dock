@@ -124,6 +124,9 @@ async def test_pending_requests_are_coalesced_and_expired_response_is_discarded(
     assert decision.snapshot_sim_time_s == 0
     assert decision.sim_time_s > decision.snapshot_sim_time_s
     assert any("discarded" in note for note in decision.safety_notes)
+    assert decision.recovery_subgoal is not None
+    assert np.linalg.norm(decision.recovery_subgoal.target_position_m) < 50
+    assert np.dot(decision.recovery_subgoal.target_velocity_mps, [50, 0, 0]) < 0
 
 
 async def test_delayed_plan_uses_current_near_port_speed_envelope():

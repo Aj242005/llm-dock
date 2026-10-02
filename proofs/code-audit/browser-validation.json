@@ -1,0 +1,98 @@
+{
+  "initial_separation_validation": "100 m default; 0.02\u20131000 m permitted",
+  "hybrid": {
+    "session": "7a7b6517c282",
+    "learned_advice_enabled": true,
+    "summary": {
+      "session_id": "7a7b6517c282443fa6f2162f09eaf5bf",
+      "status": "docked",
+      "stop_reason": "docked",
+      "failure_reason": null,
+      "steps_completed": 711,
+      "sim_time_s": 355.5,
+      "phase": "docked",
+      "final_secondary": {
+        "position_m": [
+          1.2463719487767784,
+          -0.020224111612486564,
+          1.7932038170167294e-05
+        ],
+        "velocity_mps": [
+          -0.018999643732335543,
+          0.00011297160804537104,
+          2.8519829499943816e-05
+        ],
+        "orientation_quat": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "angular_velocity_radps": [
+          6.3513868905938534e-18,
+          -7.070544249478582e-19,
+          2.927648332337633e-22
+        ],
+        "fuel_remaining_pct": 99.6444999999983,
+        "orbital_elements": {
+          "semi_major_axis_m": 6878000.0,
+          "eccentricity": 0.0,
+          "inclination_deg": 0.0,
+          "raan_deg": 0.0,
+          "arg_periapsis_deg": 0.0,
+          "true_anomaly_deg": 0.0,
+          "mean_motion_radps": null
+        },
+        "inertia_kg_m2": [
+          600.0,
+          900.0,
+          900.0
+        ],
+        "mass_kg": 500.0,
+        "name": "Secondary",
+        "capture_radius_m": 1.25,
+        "motion_limits": {
+          "min_speed_mps": 0.0,
+          "max_speed_mps": 0.1,
+          "max_horizontal_speed_mps": 0.1,
+          "max_vertical_speed_mps": 0.05
+        },
+        "inertial_position_m": null
+      },
+      "controller": "lqr",
+      "metrics": {
+        "delta_v_mps": 0.13253905009230002,
+        "ise": 7303.124726563764,
+        "max_commanded_thrust_n": 2.5000000000000004,
+        "total_llm_calls": 12,
+        "llm_fallback_calls": 0,
+        "anomaly_events_count": 0
+      },
+      "events_emitted": 749,
+      "llm_enabled": true,
+      "error": null
+    }
+  },
+  "stop_restart": "passed",
+  "manual_capture": "passed",
+  "responsive_chart_text": "at least 10.5 screen pixels at 320 and 390px",
+  "viewports": [
+    {
+      "width": 320,
+      "content": 320
+    },
+    {
+      "width": 390,
+      "content": 390
+    },
+    {
+      "width": 768,
+      "content": 768
+    },
+    {
+      "width": 1440,
+      "content": 1440
+    }
+  ],
+  "javascript_errors": []
+}

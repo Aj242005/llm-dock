@@ -92,6 +92,9 @@ class LlmSubgoal(BaseModel):
     target_position_m: Vector3
     target_velocity_mps: Vector3
     closing_speed_mps: float = Field(ge=0.0)
+    maneuver_mode: Literal["approach", "hold"] = "approach"
+    target_orientation_quat: Quaternion = Field(default_factory=lambda: [1.0, 0.0, 0.0, 0.0])
+    target_angular_velocity_radps: Vector3 = Field(default_factory=lambda: [0.0, 0.0, 0.0])
     rationale: str = Field(default="", max_length=500)
     alternatives: list[str] = Field(default_factory=list, max_length=4)
     rl_assessment: str = Field(

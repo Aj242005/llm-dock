@@ -20,7 +20,7 @@ async def test_100m_approach_respects_thrust_speed_and_acceleration():
         max_thrust_n=2.5,
         max_acceleration_mps2=0.005,
         near_port_speed_mps=0.02,
-        dock_velocity_tol_mps=0.02,
+        dock_velocity_tol_mps=0.005,
         fuel_consumption_rate_pct_per_s=0.001,
     )
     request.secondary.motion_limits = MotionLimits(
@@ -38,11 +38,11 @@ async def test_100m_approach_respects_thrust_speed_and_acceleration():
     assert max(np.linalg.norm(np.diff(velocities, axis=0) / 0.5, axis=1)) <= 0.005 + 1e-6
     assert session.summary.metrics.max_commanded_thrust_n <= 2.5 + 1e-6
     assert all(
-        speed <= 0.02 + 1e-6
+        speed <= 0.019 + 1e-6
         for event, speed in zip(telemetry, speeds, strict=True)
         if event.range_m <= 5
     )
-    assert telemetry[-1].range_m <= 1.25
+    assert telemetry[-1].range_m <= 0.02
     assert telemetry[-1].sim_time_s >= 987.5
 
 
@@ -139,7 +139,7 @@ async def test_delayed_plan_uses_current_near_port_speed_envelope():
         playback_speed=5,
         llm_cadence_steps=100,
         near_port_speed_mps=0.02,
-        dock_velocity_tol_mps=0.02,
+        dock_velocity_tol_mps=0.005,
     )
     task = asyncio.create_task(SimulationRunner(session, request, agent=planner).run())
     await planner.started.wait()
@@ -247,7 +247,7 @@ async def test_learned_lateral_advice_is_aligned_and_slowed_for_capture(monkeypa
         rl_advisor_enabled=True,
         max_thrust_n=2.5,
         max_acceleration_mps2=0.005,
-        dock_velocity_tol_mps=0.02,
+        dock_velocity_tol_mps=0.005,
         near_port_speed_mps=0.02,
     )
     session = Session("learned-final-approach")

@@ -1,0 +1,36 @@
+{
+  "date_utc": "2026-10-02T16:57:14.579841+00:00",
+  "pytest": {
+    "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -p pytest_asyncio.plugin -q -o faulthandler_timeout=120",
+    "passed": 130,
+    "exit_code": 0
+  },
+  "ruff": "check and format passed",
+  "frontend_build": "Vite production build passed; Three.js chunk warning remains",
+  "notebook_packaged_sources": 32,
+  "notebook_source_mismatches": [],
+  "prior_manifests": "all eight prior bundles and 172-file presentation bundle passed",
+  "ui": "desktop, 320px, 390px, 768px and 1440px; no page overflow or JavaScript errors; real SSE, manual capture and cancellation passed",
+  "detector": "Static HTML scan reported 16px defaults because linked stylesheet was not resolved; rendered browser hierarchy remains distinct. Detector was run once.",
+  "iss_face_source_m": [
+    0.004877861048823373,
+    -0.6732217817830113,
+    21.005283411843063
+  ],
+  "scope": "Simulator gate checks; not real-hardware precision validation.",
+  "fresh_precision_expert_smoke": {
+    "seeds": [
+      90000,
+      90001,
+      90002
+    ],
+    "max_steps": 600,
+    "results": [
+      "docked",
+      "docked",
+      "docked"
+    ],
+    "scope": "Three local LQR expert episodes using current 2 cm RL environment; no PPO training or new statistical claim."
+  },
+  "notebook_python_cells": "all non-magic code cells parse"
+}

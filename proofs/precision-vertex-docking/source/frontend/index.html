@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10191f" />
+    <title>Docking Lab — flight operations</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Docking Lab home"
+        ><i data-lucide="orbit"></i> Docking Lab
+        <span>Research simulator</span></a
+      >
+      <div class="connection">
+        <span id="connection-light" class="status-dot"></span
+        ><span id="connection">Connecting to backend</span>
+      </div>
+      <a href="/docs" target="_blank" rel="noreferrer" class="quiet-link"
+        >API reference <i data-lucide="arrow-up-right"></i
+      ></a>
+    </header>
+    <main>
+      <div class="workspace-heading">
+        <div>
+          <h1>Rendezvous & docking</h1>
+          <p>
+            Two spacecraft. One precise connection. Follow the complete
+            approach.
+          </p>
+        </div>
+        <div class="session-label">
+          <span>SESSION</span><strong id="session-id">No active session</strong>
+        </div>
+      </div>
+      <div id="error" role="alert" hidden></div>
+      <div class="workspace">
+        <aside class="configuration" aria-label="Mission configuration">
+          <div class="panel-heading">
+            <h2>Mission setup</h2>
+            <button
+              type="button"
+              id="reset"
+              class="icon-button"
+              aria-label="Reset mission parameters"
+              title="Reset mission parameters"
+            >
+              <i data-lucide="rotate-ccw"></i>
+            </button>
+          </div>
+          <p class="configuration-intro">
+            Set your initial conditions, then let guidance take the controls.
+          </p>
+          <form id="mission-form">
+            <fieldset id="mission-fields">
+              <div id="satellite-fields"></div>
+              <details class="settings">
+                <summary>Guidance & capture</summary>
+                <label
+                  >Planner<select id="provider">
+                    <option value="vertex" selected>Vertex AI · Gemini</option>
+                    <option value="heuristic">Deterministic demo</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="groq">Groq</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="anthropic">Anthropic</option>
+                  </select></label
+                >
+                <label
+                  >Provider model<input
+                    id="model"
+                    type="text"
+                    placeholder="gemini-3.8-flash"
+                    maxlength="120"
+                /></label>
+                <label
+                  >Tracking controller<select id="controller">
+                    <option value="lqr">LQR · optimal control</option>
+                    <option value="pid">PID · feedback control</option>
+                    <option value="rl">PPO · learned policy</option>
+                  </select></label
+                >
+                <label class="check-label"
+                  ><input id="rl-advisor" type="checkbox" disabled />Use learned PPO
+                  advice</label
+                >
+                <p class="field-help" id="rl-status">
+                  Checking for a trained policy…
+                </p>
+                <div class="pair">
+                  <label
+                    >Capture range <span>m</span
+                    ><input
+                      id="capture-range"
+                      type="number"
+                      value=".02"
+                      step=".001"
+                      min=".005"
+                      max=".03"
+                      required /></label
+                  ><label
+                    >Capture speed <span>m/s</span
+                    ><input
+                      id="capture-speed"
+                      type="number"
+                      value=".005"
+                      step=".001"
+                      min=".001"
+                      max=".01"
+                      required
+                  /></label>
+                </div>
+                <div class="pair">
+                  <label
+                    >Alignment <span>deg</span
+                    ><input
+                      id="alignment"
+                      type="number"
+                      value="1"
+                      step=".1"
+                      min=".1"
+                      max="5"
+                      required /></label
+                  ><label
+                    >Seed<input
+                      id="seed"
+                      type="number"
+                      value="42"
+                      step="1"
+                      required
+                  /></label>
+                </div>
+                <div class="pair">
+                  <label
+                    >Step interval <span>s</span
+                    ><input
+                      id="dt"
+                      type="number"
+                      value=".2"
+                      step=".05"
+                      min=".05"
+                      max="1"
+                      required /></label
+                  ><label
+                    >Step budget<input
+                      id="steps"
+                      type="number"
+                      value="6000"
+                      step="1"
+                      min="1"
+                      max="100000"
+                      required
+                  /></label>
+                </div>
+                <label
+                  >Replan every <span>steps</span
+                  ><input
+                    id="cadence"
+                    type="number"
+                    value="240"
+                    min="1"
+                    max="1000"
+                    step="1"
+                    required
+                /></label>
+                <div class="pair">
+                  <label
+                    >Starting range min.<span>m</span
+                    ><input
+                      id="start-range-min"
+                      type="number"
+                      value="0.02"
+                      min="0.02"
+                      max="1000"
+                      step="0.01"
+                      required
+                  /></label>
+                  <label
+                    >Starting range max.<span>m</span
+                    ><input
+                      id="start-range-max"
+                      type="number"
+                      value="1000"
+                      min="0.02"
+                      max="1000"
+                      step="0.01"
+                      required
+                  /></label>
+                </div>
+                <div class="pair">
+                  <label
+                    >Max. total thrust<span>N</span
+                    ><input
+                      id="max-thrust"
+                      type="number"
+                      value="50"
+                      min=".1"
+                      max="86"
+                      step=".1"
+                      required
+                  /></label>
+                  <label
+                    >Max. acceleration<span>m/s²</span
+                    ><input
+                      id="max-acceleration"
+                      type="number"
+                      value=".1"
+                      min=".0001"
+                      max="1"
+                      step=".0001"
+                      required
+                  /></label>
+                </div>
+                <label
+                  >Near-port speed <span>m/s</span><input id="near-speed" type="number" value="0.3" min="0.005" max="20" step="0.005" required /></label>
+                <label>Playback speed<select id="playback-speed">
+                    <option value="1">1× · real time</option>
+                    <option value="5">5× · accelerated</option>
+                    <option value="20">20× · accelerated</option>
+                    <option value="200">200× · experiment</option>
+                  </select></label
+                >
+                <p class="field-help">
+                  Motion continues while Gemini plans. At 0.10 m/s, a 100 m
+                  approach takes at least 16 minutes at 1×.
+                </p>
+                <label class="check-label"
+                  ><input id="auto-dock" type="checkbox" checked />Capture
+                  automatically when eligible</label
+                >
+                <label
+                  >Fault experiment<select id="anomaly">
+                    <option value="none">No injected fault</option>
+                    <option value="velocity_impulse">
+                      Velocity impulse at step 60
+                    </option>
+                    <option value="sensor_dropout">
+                      Sensor loss at step 60
+                    </option>
+                    <option value="priority_change">
+                      Abort instruction at step 60
+                    </option>
+                  </select></label
+                >
+              </details>
+            </fieldset>
+            <div class="mission-actions">
+              <button type="submit" id="start" class="primary-button">
+                <i data-lucide="play"></i>Start docking session</button
+              ><button
+                type="button"
+                id="cancel"
+                class="secondary-button"
+                disabled
+              >
+                <i data-lucide="square"></i>Stop session
+              </button>
+            </div>
+          </form>
+        </aside>
+        <section class="flight-view" aria-label="Live docking view">
+          <div class="view-heading">
+            <div class="view-title">
+              <h2>Orbital rendezvous</h2>
+              <span id="phase" class="phase">Ready to simulate</span>
+            </div>
+            <button
+              id="camera-reset"
+              class="icon-button"
+              aria-label="Fit both spacecraft in view"
+              title="Fit spacecraft"
+            >
+              <i data-lucide="focus"></i>
+            </button>
+          </div>
+          <div id="scene" aria-label="Interactive 3D spacecraft scene">
+            <div class="scene-topline">
+              <span class="scene-live"
+                ><b></b><span id="scene-state">Mission preview</span></span
+              >
+              <span>LOCAL RELATIVE FRAME</span>
+            </div>
+            <div class="spacecraft-label primary-label" id="primary-label">
+              <b></b><span>ISS<small>Primary docking port</small></span>
+            </div>
+            <div class="spacecraft-label secondary-label" id="secondary-label">
+              <b></b><span>Secondary<small>Controlled chaser</small></span>
+            </div>
+            <div
+              class="capture-announcement"
+              id="capture-announcement"
+              role="status"
+              hidden
+            >
+              <i data-lucide="circle-check"></i>
+              <div>
+                <strong>Docking capture confirmed.</strong
+                ><span id="capture-result"
+                  >All capture conditions satisfied.</span
+                >
+              </div>
+            </div>
+            <div class="scene-toolbar" role="group" aria-label="Camera view">
+              <button type="button" data-camera="chaser" aria-pressed="false">
+                Track chaser
+              </button>
+              <button type="button" data-camera="overview" aria-pressed="true">
+                ISS + chaser
+              </button>
+              <button type="button" data-camera="station" aria-pressed="false">
+                Full ISS
+              </button>
+              <button type="button" data-camera="port" aria-pressed="false">
+                Target port
+              </button>
+            </div>
+            <div class="scene-caption">
+              <span>Drag to orbit · scroll to zoom</span>
+              <span>NASA ISS model · concept chaser · illustrative Earth</span>
+              <span id="playback-status"
+                >1× playback · 100 m initial separation</span
+              >
+            </div>
+            <div id="scene-message" hidden></div>
+          </div>
+          <div class="view-options" role="group" aria-label="Scene overlays">
+            <label
+              ><input type="checkbox" id="show-trail" checked />Flight
+              trail</label
+            >
+            <label
+              ><input
+                type="checkbox"
+                id="show-vectors"
+                checked
+              />Velocity</label
+            >
+            <label
+              ><input type="checkbox" id="show-envelope" checked />Capture
+              envelope</label
+            >
+            <span>X / Y horizontal · Z vertical</span>
+          </div>
+          <div
+            class="coordinate-controls"
+            role="group"
+            aria-label="3D coordinate grid"
+          >
+            <label
+              ><input type="checkbox" id="show-grid" checked />3D grid</label
+            >
+            <label
+              >Grid spacing
+              <select id="grid-spacing">
+                <option value="auto">Auto · metres</option>
+                <option value="0.01">1 cm</option>
+                <option value="0.1">10 cm</option>
+                <option value="1">1 m</option>
+                <option value="10">10 m</option>
+                <option value="100">100 m</option>
+              </select></label
+            >
+            <span class="axis-legend"
+              ><b class="axis-x">X</b><b class="axis-y">Y</b
+              ><b class="axis-z">Z</b></span
+            >
+            <output id="grid-readout"
+              >10 m per division · drag to rotate</output
+            >
+            <span id="iss-status" role="status">Loading NASA ISS model…</span>
+          </div>
+          <div class="telemetry" aria-label="Live telemetry">
+            <div>
+              <span>Port separation</span
+              ><strong id="range">100.00 <small>m</small></strong>
+            </div>
+            <div>
+              <span>Relative speed</span
+              ><strong id="speed">0.000 <small>m/s</small></strong>
+            </div>
+            <div>
+              <span>Fuel remaining</span
+              ><strong id="fuel">100.0 <small>%</small></strong>
+            </div>
+            <div>
+              <span>Simulation time</span
+              ><strong id="time">0.0 <small>s</small></strong>
+            </div>
+          </div>
+          <div class="velocity-readout">
+            <h3>Velocity vectors <span>m/s</span></h3>
+            <div>
+              <span class="primary-text">Primary</span
+              ><output id="primary-velocity"
+                >X 0.000 / Y 0.000 / Z 0.000</output
+              >
+            </div>
+            <div>
+              <span class="secondary-text">Secondary</span
+              ><output id="secondary-velocity"
+                >X 0.000 / Y 0.000 / Z 0.000</output
+              >
+            </div>
+          </div>
+          <div class="capture-panel">
+            <div class="panel-heading">
+              <h2>Precision capture</h2>
+              <span id="capture-status">Awaiting approach</span>
+            </div>
+            <p>
+              A 2 cm shared gate by default, configurable up to 3 cm. Capture requires
+              low relative speed, aligned ports, and stable rotation.
+            </p>
+            <div id="capture-checks" class="capture-checks"></div>
+            <button id="dock" class="secondary-button" disabled>
+              <i data-lucide="link"></i>Engage docking capture
+            </button>
+          </div>
+          <div class="trace-panel">
+            <div class="panel-heading">
+              <h2>Approach trace</h2>
+              <span>Port separation / simulation time</span>
+            </div>
+            <p id="chart-empty">Start a session to record the approach.</p>
+            <svg
+              id="range-chart"
+              role="img"
+              aria-label="Separation over simulation time"
+              hidden
+            ></svg>
+          </div>
+        </section>
+        <aside class="decision-panel" aria-label="Guidance decisions">
+          <div class="panel-heading">
+            <h2>LLM decision explanation</h2>
+            <span id="decision-count">0 decisions</span>
+          </div>
+          <p class="decision-intro">
+            The model’s explanation of its chosen maneuver, with measured
+            evidence and alternatives.
+          </p>
+          <div class="planner-state" role="status" id="planner-status">
+            Ready for Vertex AI
+          </div>
+          <section
+            class="latest-explanation"
+            aria-label="Latest maneuver explanation"
+            aria-live="polite"
+          >
+            <h3>Why this maneuver</h3>
+            <p id="latest-rationale">
+              Start a session to request a plan from Gemini. The simulation
+              continues moving while the model plans.
+            </p>
+            <h3>Learned policy assessment</h3>
+            <p id="latest-rl">No proposal received yet.</p>
+            <h3>Alternatives considered</h3>
+            <ul id="latest-alternatives">
+              <li>Alternatives will appear with the first decision.</li>
+            </ul>
+          </section>
+          <div class="active-command">
+            <h3>Applied thrust <span>N</span></h3>
+            <output id="thrust">X 0.00 / Y 0.00 / Z 0.00</output
+            ><span id="command-status">No actuator command</span>
+            <h3>Applied torque <span>N·m</span></h3>
+            <output id="torque">X 0.00 / Y 0.00 / Z 0.00</output>
+            <h3>Port attitude</h3>
+            <output id="attitude-error">Awaiting telemetry</output>
+            <h3>Rotation rate <span>rad/s</span></h3>
+            <output id="rotation-rate">X 0.000 / Y 0.000 / Z 0.000</output>
+            <p class="field-help">Nozzle plumes illustrate applied thrust and torque.</p>
+          </div>
+          <div id="decisions" aria-live="polite">
+            <div class="empty-log">
+              <i data-lucide="route"></i>
+              <h3>Every maneuver has a reason.</h3>
+              <p>
+                Start a session to see the planner’s chosen maneuver, the
+                alternatives it rejected, and the evidence behind it.
+              </p>
+              <p>
+                Demo mode uses a deterministic planner. Provider modes make real
+                server-side LLM calls.
+              </p>
+            </div>
+          </div>
+          <button id="export" class="secondary-button" disabled>
+            <i data-lucide="download"></i>Export session evidence
+          </button>
+        </aside>
+      </div>
+      <footer>
+        <span
+          >Research simulation · local relative dynamics · no hardware
+          connection</span
+        ><a href="/proofs/"
+          >Training & evaluation evidence <i data-lucide="arrow-up-right"></i
+        ></a>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

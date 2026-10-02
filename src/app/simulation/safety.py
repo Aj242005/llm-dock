@@ -5,7 +5,7 @@ import numpy as np
 from app.schemas.docking import MotionLimits
 from app.simulation.dynamics import Command, attitude_error_deg, propagate_chaser
 
-CAPTURE_RANGE_M = 1.25
+CAPTURE_RANGE_M = 0.03
 
 
 def limit_velocity(velocity, limits: MotionLimits):
@@ -24,12 +24,12 @@ def limit_velocity(velocity, limits: MotionLimits):
 
 def capture_checks(
     state,
-    position_tol=1.25,
-    velocity_tol=0.1,
-    attitude_tol=2.0,
-    omega_tol=0.05,
-    primary_radius=1.25,
-    secondary_radius=1.25,
+    position_tol=0.02,
+    velocity_tol=0.005,
+    attitude_tol=1.0,
+    omega_tol=0.01,
+    primary_radius=0.02,
+    secondary_radius=0.02,
 ):
     """Each port must be inside the other port's capture radius."""
     radius = min(CAPTURE_RANGE_M, position_tol, primary_radius, secondary_radius)

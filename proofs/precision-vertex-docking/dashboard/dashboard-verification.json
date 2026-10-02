@@ -1,0 +1,104 @@
+{
+  "initial_separation_validation": "100 m default; 0.02\u20131000 m permitted",
+  "active_thruster_jets": 9,
+  "hybrid": {
+    "session": "e7bba3937fc2",
+    "learned_advice_enabled": true,
+    "final_range_m": [
+      0.010000244281939687,
+      1.4101462123857637e-10,
+      0.0
+    ],
+    "summary": {
+      "session_id": "e7bba3937fc244258106e10cbe5cfc73",
+      "status": "docked",
+      "stop_reason": "docked",
+      "failure_reason": null,
+      "steps_completed": 283,
+      "sim_time_s": 56.6,
+      "phase": "docked",
+      "final_secondary": {
+        "position_m": [
+          0.010000244281939687,
+          1.4101462123857637e-10,
+          0.0
+        ],
+        "velocity_mps": [
+          -8.15928730219712e-07,
+          -1.150550702590046e-14,
+          0.0
+        ],
+        "orientation_quat": [
+          0.9999627369141612,
+          -0.001006463790444273,
+          0.00365574801102076,
+          -0.0077554703441120015
+        ],
+        "angular_velocity_radps": [
+          0.0004348137291421918,
+          -0.0006028958817967876,
+          0.0011524455134753954
+        ],
+        "fuel_remaining_pct": 99.94339999999812,
+        "orbital_elements": {
+          "semi_major_axis_m": 6878000.0,
+          "eccentricity": 0.0,
+          "inclination_deg": 0.0,
+          "raan_deg": 0.0,
+          "arg_periapsis_deg": 0.0,
+          "true_anomaly_deg": 0.0,
+          "mean_motion_radps": null
+        },
+        "inertia_kg_m2": [
+          600.0,
+          900.0,
+          900.0
+        ],
+        "mass_kg": 500.0,
+        "name": "Secondary",
+        "capture_radius_m": 0.02,
+        "motion_limits": {
+          "min_speed_mps": 0.0,
+          "max_speed_mps": 2.0,
+          "max_horizontal_speed_mps": 2.0,
+          "max_vertical_speed_mps": 2.0
+        },
+        "inertial_position_m": null
+      },
+      "controller": "lqr",
+      "metrics": {
+        "delta_v_mps": 1.0669440554109784,
+        "ise": 501.1693731903638,
+        "max_commanded_thrust_n": 50.00000000000001,
+        "total_llm_calls": 2,
+        "llm_fallback_calls": 0,
+        "anomaly_events_count": 0
+      },
+      "events_emitted": 291,
+      "llm_enabled": true,
+      "error": null
+    }
+  },
+  "stop_restart": "passed",
+  "manual_capture": "passed",
+  "responsive_chart_text": "at least 10.5 screen pixels at 320 and 390px",
+  "viewports": [
+    {
+      "width": 320,
+      "content": 320
+    },
+    {
+      "width": 390,
+      "content": 390
+    },
+    {
+      "width": 768,
+      "content": 768
+    },
+    {
+      "width": 1440,
+      "content": 1440
+    }
+  ],
+  "javascript_errors": []
+}

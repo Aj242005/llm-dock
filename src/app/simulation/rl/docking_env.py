@@ -53,6 +53,8 @@ from app.simulation.dynamics import (
     attitude_error_deg,
     classify_phase,
     propagate_chaser,
+    quat_conjugate,
+    quat_multiply,
 )
 from app.simulation.safety import capture_checks, enforce_command, limit_velocity
 
@@ -86,8 +88,9 @@ def build_rl_observation(state: RigidBodyState, subgoal: LlmSubgoal) -> np.ndarr
         [
             dp,
             dv,
-            np.asarray(state.quat, dtype=float),
-            np.asarray(state.omega, dtype=float),
+            quat_multiply(quat_conjugate(np.asarray(subgoal.target_orientation_quat)), state.quat),
+            np.asarray(state.omega, dtype=float)
+            - np.asarray(subgoal.target_angular_velocity_radps),
             [state.fuel_pct / 100.0],
         ]
     ).astype(np.float32)
@@ -109,10 +112,10 @@ class DockingEnv(gym.Env):
         max_accel_mps2: float = MAX_ACCEL_MPS2,
         max_torque_nm: float = MAX_TORQUE_NM,
         subgoal_cadence_steps: int = 10,
-        dock_position_tol_m: float = 1.25,
-        dock_velocity_tol_mps: float = 0.1,
-        dock_attitude_tol_deg: float = 2.0,
-        dock_omega_tol_radps: float = 0.05,
+        dock_position_tol_m: float = 0.02,
+        dock_velocity_tol_mps: float = 0.005,
+        dock_attitude_tol_deg: float = 1.0,
+        dock_omega_tol_radps: float = 0.01,
         diverged_bound_m: float = 1500.0,
         max_omega_radps: float = 5.0,  # tumble guard, mirrors runner max_omega_radps
         reward_weights: dict[str, float] | None = None,

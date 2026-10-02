@@ -18,7 +18,36 @@ import numpy as np
 
 from app.schemas.docking import ControllerType
 from app.schemas.events import LlmSubgoal
-from app.simulation.dynamics import Command, RigidBodyState
+from app.simulation.dynamics import Command, RigidBodyState, quat_conjugate, quat_multiply
+
+
+def approach_force(state, subgoal, dt, n=0.0):
+    """Track an approach velocity continuously; brake as the port distance closes.
+
+    Position waypoints describe direction, not mandatory intermediate stops.
+    The runner independently applies thrust, speed and stopping-distance limits.
+    """
+    offset = np.asarray(subgoal.target_position_m) - state.position
+    distance = float(np.linalg.norm(offset))
+    requested = max(subgoal.closing_speed_mps, float(np.linalg.norm(subgoal.target_velocity_mps)))
+    if requested < 1e-9:
+        requested = min(2.0, np.sqrt(0.1 * distance))
+    speed = min(requested, 0.2 * distance)
+    desired = offset / max(distance, 1e-9) * speed
+    x, _, z = state.position
+    vx, vy, _ = state.velocity
+    drift = np.array([2 * n * vy + 3 * n * n * x, -2 * n * vx, -n * n * z])
+    return state.mass_kg * ((desired - state.velocity) / max(1.0, dt) - drift)
+
+
+def attitude_error(state, subgoal):
+    """Shortest current-to-target attitude error and body-rate error."""
+    error = quat_multiply(quat_conjugate(np.asarray(subgoal.target_orientation_quat)), state.quat)
+    if error[0] < 0:
+        error = -error
+    length = np.linalg.norm(error[1:])
+    rotation = error[1:] * (2 * np.arctan2(length, error[0]) / max(length, 1e-12))
+    return rotation, state.omega - np.asarray(subgoal.target_angular_velocity_radps)
 
 
 class ControlContext:

@@ -17,13 +17,13 @@ from app.simulation.safety import capture_checks
 
 
 def test_capture_requires_both_ranges_and_all_checks():
-    state = RigidBodyState(position=np.array([1.25, 0.0, 0.0]))
+    state = RigidBodyState(position=np.array([0.02, 0.0, 0.0]))
     assert capture_checks(state)["eligible"]
-    state.position[0] = 1.250001
+    state.position[0] = 0.020001
     assert not capture_checks(state)["eligible"]
-    state.position[0] = 1.0
-    assert not capture_checks(state, secondary_radius=0.5)["eligible"]
-    state.velocity[0] = 0.10001
+    state.position[0] = 0.015
+    assert not capture_checks(state, secondary_radius=0.01)["eligible"]
+    state.velocity[0] = 0.005001
     assert not capture_checks(state)["eligible"]
 
 
@@ -109,7 +109,7 @@ async def test_manual_capture_rechecks_and_stop_finishes():
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        request = make_request(position=(1.0, 0.0, 0.0), auto_dock=False, stream_pacing_s=0.01)
+        request = make_request(position=(0.02, 0.0, 0.0), auto_dock=False, stream_pacing_s=0.01)
         urls = (
             await client.post("/api/v1/docking/simulate", json=request.model_dump(mode="json"))
         ).json()

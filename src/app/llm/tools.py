@@ -20,11 +20,15 @@ def docking_tools(snapshot):
             "distance_m": distance,
             "relative_speed_mps": float(np.linalg.norm(velocity)),
             "closing_speed_mps": -float(np.dot(position, velocity)) / max(distance, 1e-9),
+            "attitude_error_deg": float(
+                np.degrees(2 * np.arccos(np.clip(abs(snapshot.orientation_quat[0]), 0, 1)))
+            ),
+            "angular_speed_radps": float(np.linalg.norm(snapshot.angular_velocity_radps)),
         }
 
     @tool
     def inspect_capture_gate() -> dict:
-        """Read the shared 1.25 metre gate and speed, attitude, rotation checks."""
+        """Read the shared centimetre capture gate and speed, attitude, rotation checks."""
         return snapshot.capture
 
     @tool
@@ -36,6 +40,9 @@ def docking_tools(snapshot):
             "max_acceleration_mps2": snapshot.max_acceleration_mps2,
             "mass_kg": snapshot.mass_kg,
             "torque_per_axis_nm": 20.0,
+            "current_approach_speed_limit_mps": snapshot.approach_speed_limit_mps,
+            "capture_speed_mps": snapshot.capture_speed_mps,
+            "target_angular_speed_limit_radps": snapshot.max_angular_speed_radps,
             "primary_limits": snapshot.primary_limits,
             "secondary_limits": snapshot.secondary_limits,
             "minimum_speed_rule": "Transit preference; braking and capture may use zero speed.",

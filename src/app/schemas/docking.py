@@ -157,7 +157,7 @@ class SatelliteState(BaseModel):
     )
     mass_kg: float = Field(default=500.0, gt=0.0)
     name: str = Field(default="Spacecraft", min_length=1, max_length=80)
-    capture_radius_m: float = Field(default=1.25, gt=0.0, le=1.25)
+    capture_radius_m: float = Field(default=0.02, gt=0.0, le=0.03)
     motion_limits: MotionLimits = Field(default_factory=MotionLimits)
     # Inertial (ECI) position of the primary, for orbit/camera rendering.
     inertial_position_m: Vector3 | None = Field(default=None, min_length=3, max_length=3)
@@ -239,9 +239,9 @@ class SimulationConfig(BaseModel):
     )
     anomalies: list[AnomalyConfig] = Field(default_factory=list, max_length=10)
     # Tolerances for the "docked" condition.
-    dock_position_tol_m: float = Field(default=1.25, gt=0.0, le=1.25)
-    dock_velocity_tol_mps: float = Field(default=0.1, gt=0.0)
-    dock_attitude_tol_deg: float = Field(default=2.0, gt=0.0, le=90.0)
+    dock_position_tol_m: float = Field(default=0.02, gt=0.0, le=0.03)
+    dock_velocity_tol_mps: float = Field(default=0.005, gt=0.0, le=0.01)
+    dock_attitude_tol_deg: float = Field(default=1.0, gt=0.0, le=5.0)
     # Fuel: normalized mass-flow per second of thruster use.
     fuel_consumption_rate_pct_per_s: float = Field(default=0.05, ge=0.0)
     # Divergence guards: fail the run (FailureReason.DIVERGED) if the relative
@@ -278,10 +278,10 @@ class SimulationConfig(BaseModel):
         description="Maximum translational acceleration, including orbital drift",
     )
     near_port_speed_mps: float = Field(
-        default=0.05,
+        default=0.3,
         gt=0,
-        le=0.1,
-        description="Relative speed ceiling within five metres, including braking approach",
+        le=20.0,
+        description="Near-port approach speed; stopping distance and final capture limits also apply",
     )
     planner_reserve_s: float = Field(
         default=5.0,

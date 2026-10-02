@@ -36,17 +36,21 @@ stays inside the configured band, and invalid
 manual positions cannot start a session. The request sends `initial_separation_range_m`, which
 the backend validates using both three-dimensional port positions. The 2 cm
 minimum applies to initial placement; the 1 km maximum also guards the running
-simulation. Capture still requires at most 1.25 m, low speed, and alignment.
+simulation. Capture defaults to a 2 cm gate (maximum 3 cm), low speed, and alignment.
 API clients can omit the narrower band, but must stay within 2 cm–1 km initially.
 For longer approaches, increase the time and step budgets in Guidance & capture.
 
-The secondary defaults to **0.10 m/s** total and horizontal speed, **0.05 m/s**
-vertical speed, **2.5 N** total thrust, and **0.005 m/s²** total local acceleration.
-Applied thrust is limited before integration. A stopping-distance envelope
-brakes toward **0.02 m/s within 5 m**. These are conservative simulation settings,
-not a calibrated specification of a particular spacecraft engine.
-Playback defaults to **1×**: each 0.5 s physics step is paced over 0.5 s of wall
-time. A 100 m approach takes at least 16 minutes.
+The secondary starts at `[80, 48, 36]` m (100 m separation), with a deliberately
+misaligned attitude so simultaneous rotation and translation are visible. It defaults
+to **2 m/s** total, horizontal and vertical speed, **50 N** total thrust, and
+**0.1 m/s?** total local acceleration for a 500 kg concept chaser. All are configurable;
+the speed inputs permit up to 20 m/s. These are simulator parameters, not a
+calibrated engine specification. A stopping-distance envelope brakes before entering
+the **0.3 m/s near-port zone**, then tightens to **0.004 m/s for capture**.
+Playback defaults to **1?**: each 0.2 s physics step is paced over 0.2 s of wall time.
+Translation and attitude alignment run together; intermediate waypoints do not
+require the spacecraft to stop. The provider's requested closing speed remains
+an upper limit, and live telemetry displays the force, torque, attitude error and rate.
 Accelerated playback is explicitly selectable for experiments and does not
 increase the physical speed limit. Physics, both spacecraft states, and SSE
 telemetry continue while Vertex plans in the background. The last accepted
@@ -61,7 +65,8 @@ outstanding task.
 
 The primary spacecraft uses NASA's [International Space Station 3D model](https://science.nasa.gov/resource/international-space-station-3d-model/),
 served locally with optimized textures and geometry compression. Its forward
-PMA-2 port is placed at the simulation origin. The chaser is an authored futuristic
+PMA-2 docking-face centre, measured from front-plane vertices rather than the
+adapter bounding-box centre, is placed at the simulation origin. The chaser is an authored futuristic
 concept with faceted armour, illuminated rails, optics, and manoeuvring nozzles.
 The Earth backdrop is illustrative. Four cameras provide **Track chaser**,
 **ISS + chaser**, **Full ISS**, and **Target port** views.
@@ -69,7 +74,8 @@ Drag to orbit and scroll to zoom. A shared **X/Y/Z coordinate grid** rotates wit
 the same camera; select automatic spacing or 1 cm, 10 cm, 1 m, 10 m, and 100 m
 divisions. Physics Z points up. Flight trails, relative
 velocity vectors, and each port's capture envelope can be toggled independently.
-Positions and attitudes follow server telemetry; the capture announcement
+Individual translation and attitude nozzles emit illustrative plumes in response
+to applied force and torque. Positions and attitudes follow server telemetry; the capture announcement
 appears only after the server confirms docking. Reduced motion removes spatial
 transitions, and offscreen rendering pauses. Fonts are served locally.
 See `frontend/public/models/README.md` for NASA attribution, asset hashes, and
@@ -100,7 +106,9 @@ session export are saved in `.impeccable/review/`.
 3. At each cadence, a fresh snapshot goes to the planner. LangChain provides
    `measure_distance`, `inspect_capture_gate`, `inspect_actuators`,
    `inspect_rl_heuristic`, `preview_maneuver`, and `submit_maneuver` tools.
-   The model returns a target, short justification, and rejected alternatives.
+   The model returns translation and attitude targets, a short justification, and
+   rejected alternatives. The prompt explicitly coordinates both manoeuvres and
+   distinguishes the chaser envelope from the primary envelope.
    The right panel displays the latest natural-language explanation, learned
    advice assessment, applied limits, and alternatives above the decision history.
    Tools inspect or preview; only the runner applies actuator commands.
@@ -118,11 +126,13 @@ session export are saved in `.impeccable/review/`.
    When no bounded force can maintain a limit after a disturbance, the run
    fails explicitly rather than editing the physical velocity. Minimum speed
    is a transit preference; braking and docking permit zero speed.
-6. Capture requires separation **at most min(1.25 m, primary radius, secondary
-   radius, configured range)**, relative speed at most the configured tolerance
-   (dashboard default 0.02 m/s; API default 0.1 m/s), attitude error at most the configured tolerance (default
-   2 degrees), and relative rotation at most 0.05 rad/s. Manual and automatic
-   capture share the same gate. Abort and stale sensor readings inhibit capture.
+6. Capture requires separation **at most min(3 cm, primary radius, secondary
+   radius, configured range)**, with both radii and the range defaulting to **2 cm**.
+   Relative speed must be at most the configured tolerance (**0.005 m/s** default,
+   maximum 0.01 m/s), attitude error at most **1 degree** by default, and relative
+   rotation at most **0.01 rad/s**. Manual and automatic capture share the same
+   gate. Abort and stale sensor readings inhibit capture.
+
 
 The Three.js spacecraft are schematic models with docking-port origins. Mesh
 sizes and animations are visual aids; backend coordinates determine numerical
@@ -133,6 +143,11 @@ communications latency, and flight hardware are outside this simulator.
 
 The live-session code audit, regression results, original reference run, and
 verified Vertex-with-PPO trace are in [`proofs/code-audit/README.md`](proofs/code-audit/README.md).
+
+The coordinated 2 cm live demonstration and its full telemetry are in
+[`proofs/precision-vertex-docking/README.md`](proofs/precision-vertex-docking/README.md).
+Older training success rates use their original 1.25 m gate; they do not establish
+2 cm performance. The notebook packages the current gate for future training.
 
 ## Providers
 

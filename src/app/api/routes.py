@@ -151,7 +151,7 @@ async def capabilities():
         "default_models": {"vertex": settings.llm_model_vertex},
         "rl_available": readiness["available"],
         "rl_reason": readiness["reason"],
-        "capture_range_m": 1.25,
+        "capture_range_m": 0.02,
     }
 
 

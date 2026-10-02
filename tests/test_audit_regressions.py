@@ -197,7 +197,7 @@ async def test_near_port_relative_speed_limit_with_moving_primary():
         velocity=(-0.04, 0, 0),
         max_steps=200,
         near_port_speed_mps=0.02,
-        dock_velocity_tol_mps=0.02,
+        dock_velocity_tol_mps=0.005,
     )
     request.primary.velocity_mps = [0.05, 0, 0]
     request.secondary.motion_limits = MotionLimits(max_speed_mps=0.1)
@@ -205,7 +205,7 @@ async def test_near_port_relative_speed_limit_with_moving_primary():
     await SimulationRunner(session, request).run()
     telemetry = [e for e in session.event_log if e.type == "telemetry"]
     assert np.linalg.norm(telemetry[1].velocity_mps) < np.linalg.norm(telemetry[0].velocity_mps)
-    assert all(np.linalg.norm(e.velocity_mps) <= 0.019 + 1e-6 for e in telemetry[15:])
+    assert all(np.linalg.norm(e.velocity_mps) <= 0.02 + 1e-6 for e in telemetry[15:])
     assert all(np.linalg.norm(e.secondary_velocity_mps) <= 0.1 + 1e-6 for e in telemetry)
 
 

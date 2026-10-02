@@ -90,6 +90,32 @@ export function createScene(container) {
     return object;
   }
 
+  function thruster(group, position, outward, kind, axis, sign) {
+    const jet = new THREE.Group();
+    jet.position.set(...position);
+    jet.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), outward);
+    group.add(jet);
+    addMesh(jet, new THREE.CylinderGeometry(0.07, 0.04, 0.12, 12, 1, true), dark);
+    const glow = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      uniforms: { strength: { value: 0 } },
+      vertexShader: `varying vec2 plumeUV;
+        void main() { plumeUV = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `varying vec2 plumeUV; uniform float strength;
+        void main() {
+          float fade = pow(1.0 - plumeUV.y, 2.0);
+          vec3 color = mix(vec3(1.0, 0.64, 0.28), vec3(0.52, 0.80, 1.0), plumeUV.y);
+          gl_FragColor = vec4(color, fade * strength * 0.7);
+        }`,
+    });
+    const plume = addMesh(jet, new THREE.CylinderGeometry(0.22, 0.045, 1, 12, 8, true).translate(0, 0.56, 0), glow);
+    plume.visible = false;
+    return { plume, kind, axis, sign };
+  }
+
   function spacecraft(color, isPrimary) {
     const group = new THREE.Group();
     const direction = isPrimary ? -1 : 1;
@@ -230,23 +256,40 @@ export function createScene(container) {
       cylinder(group, 0.44, 0.15, 2.5, dark);
       ring(group, 0.35, 0.04, 2.6, silver);
     }
-    const exhaust = addMesh(
-      group,
-      new THREE.ConeGeometry(0.16, 1, 16),
-      new THREE.MeshBasicMaterial({
-        color: 0xb6e6ff,
-        transparent: true,
-        opacity: 0.55,
-        depthWrite: false,
-      }),
-    );
-    exhaust.visible = false;
-    return { group, exhaust, direction };
+    const jets = [];
+    if (!isPrimary) {
+      // Reaction thrust points opposite the exhaust. Rotation uses opposing
+      // nozzle pairs, so a torque command remains visible during translation.
+      for (let axis = 0; axis < 3; axis++) {
+        for (const sign of [-1, 1]) {
+          const outward = new THREE.Vector3().setComponent(axis, -sign);
+          const position = [1.45, 0, 0];
+          position[axis] = axis === 0 ? (sign < 0 ? 2.65 : 0.2) : -sign * 0.76;
+          if (axis === 0 && sign > 0) position[1] = 0.62;
+          jets.push(thruster(group, position, outward, "force", axis, sign));
+          const torqueAxis = new THREE.Vector3().setComponent(axis, sign);
+          for (const side of [-1, 1]) {
+            const arm = new THREE.Vector3().setComponent((axis + 1) % 3, side * 0.66);
+            const reaction = torqueAxis.clone().cross(arm).normalize();
+            const nozzle = arm.clone().add(new THREE.Vector3(1.4, 0, 0));
+            jets.push(thruster(group, nozzle.toArray(), reaction.negate(), "torque", axis, sign));
+          }
+        }
+      }
+    }
+    return { group, jets, direction };
   }
 
   const placeholder = spacecraft(0x90b9e9, true);
   const primary = { group: new THREE.Group() };
   primary.group.add(placeholder.group);
+  // This collar stays visible on the NASA asset and shares the exact port origin.
+  const hub = new THREE.Group();
+  hub.name = "Docking face at grid origin";
+  ring(hub, 0.38, 0.025, -0.015, silver);
+  const hubAccent = new THREE.MeshBasicMaterial({ color: 0x90b9e9 });
+  ring(hub, 0.42, 0.009, -0.025, hubAccent);
+  primary.group.add(hub);
   const secondary = spacecraft(0x8fd9c4, false);
   scene.add(primary.group, secondary.group);
 
@@ -399,6 +442,8 @@ export function createScene(container) {
   let primaryQuaternion = new THREE.Quaternion();
   let velocity = new THREE.Vector3();
   let force = new THREE.Vector3();
+  let torque = new THREE.Vector3();
+  let maxThrust = 50;
   let running = false;
   let captured = false;
   let cameraMode = "overview";
@@ -511,18 +556,22 @@ export function createScene(container) {
       desiredQuaternion.premultiply(primaryQuaternion);
     velocity = vector(state.velocity_mps || [0, 0, 0]);
     force = vector(state.command_force_n || [0, 0, 0]);
+    torque = vector(state.command_torque_nm || [0, 0, 0]);
+    maxThrust = state.max_thrust_n || 50;
     running = !!state.running;
     captured = !!state.captured;
     primaryEnvelope.scale.setScalar(
-      (state.primary_capture_radius_m || 1.25) / 1.25,
+      (state.primary_capture_radius_m || 0.02) / 1.25,
     );
     secondaryEnvelope.scale.setScalar(
-      (state.secondary_capture_radius_m || 1.25) / 1.25,
+      (state.secondary_capture_radius_m || 0.02) / 1.25,
     );
     for (const envelope of [primaryEnvelope, secondaryEnvelope]) {
       for (const circle of envelope.children)
         circle.material.opacity = captured ? 0.6 : 0.25;
     }
+    hubAccent.color.setHex(captured ? 0x8fd9c4 : 0x90b9e9);
+    container.dataset.captured = String(captured);
     if (reset) {
       secondary.group.position.copy(desiredPosition);
       secondary.group.quaternion.copy(desiredQuaternion);
@@ -601,26 +650,20 @@ export function createScene(container) {
         0.15,
       );
     }
-    secondary.exhaust.visible = running && force.length() > 0.1;
-    if (secondary.exhaust.visible) {
-      const direction = force
-        .clone()
-        .normalize()
-        .negate()
-        .applyQuaternion(secondary.group.quaternion.clone().invert());
-      secondary.exhaust.position
-        .copy(direction)
-        .multiplyScalar(1.1)
-        .add(new THREE.Vector3(1.1, 0, 0));
-      secondary.exhaust.quaternion.setFromUnitVectors(
-        new THREE.Vector3(0, -1, 0),
-        direction,
-      );
-      secondary.exhaust.scale.y = Math.min(
-        3,
-        Math.max(0.3, force.length() / 25),
-      );
+    const bodyForce = force.clone().applyQuaternion(secondary.group.quaternion.clone().invert());
+    let activeJets = 0;
+    for (const jet of secondary.jets) {
+      const command = jet.kind === "force" ? bodyForce : torque;
+      const budget = jet.kind === "force" ? maxThrust : 20;
+      const strength = Math.min(1, Math.max(0, jet.sign * command.getComponent(jet.axis) / budget));
+      jet.plume.visible = running && !captured && strength > 0.0001;
+      if (!jet.plume.visible) continue;
+      activeJets++;
+      const pulse = reducedMotion.matches ? 1 : 0.94 + 0.06 * Math.sin(now * 0.035);
+      jet.plume.scale.y = 0.18 + 1.8 * Math.sqrt(strength);
+      jet.plume.material.uniforms.strength.value = Math.max(0.15, Math.sqrt(strength)) * pulse;
     }
+    container.dataset.activeJets = String(activeJets);
     const linePositions = separation.geometry.attributes.position;
     linePositions.setXYZ(1, ...secondary.group.position.toArray());
     linePositions.needsUpdate = true;
@@ -667,7 +710,8 @@ export function createScene(container) {
     renderer.clearDepth();
     renderer.render(scene, camera);
   });
-  loadIssModel(primary.group, placeholder.group, () => {
+  loadIssModel(primary.group, placeholder.group, (sourcePort) => {
+    container.dataset.issSourcePort = JSON.stringify(sourcePort);
     issLoaded = true;
     // Cache model bounds once instead of visiting every ISS mesh each frame.
     const rotation = primary.group.quaternion.clone();

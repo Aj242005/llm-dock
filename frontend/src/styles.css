@@ -847,6 +847,9 @@ input[type="number"] {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+.active-command h3:not(:first-child) {
+  margin-top: 14px;
+}
 .active-command > span {
   display: block;
   margin-top: 8px;

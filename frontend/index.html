@@ -93,20 +93,20 @@
                     ><input
                       id="capture-range"
                       type="number"
-                      value="1.25"
-                      step="0.01"
-                      min="0.01"
-                      max="1.25"
+                      value=".02"
+                      step=".001"
+                      min=".005"
+                      max=".03"
                       required /></label
                   ><label
                     >Capture speed <span>m/s</span
                     ><input
                       id="capture-speed"
                       type="number"
-                      value="0.02"
-                      step="0.005"
-                      min="0.005"
-                      max="1"
+                      value=".005"
+                      step=".001"
+                      min=".001"
+                      max=".01"
                       required
                   /></label>
                 </div>
@@ -116,10 +116,10 @@
                     ><input
                       id="alignment"
                       type="number"
-                      value="2"
-                      step="0.1"
-                      min="0.1"
-                      max="90"
+                      value="1"
+                      step=".1"
+                      min=".1"
+                      max="5"
                       required /></label
                   ><label
                     >Seed<input
@@ -136,9 +136,9 @@
                     ><input
                       id="dt"
                       type="number"
-                      value="0.5"
-                      step="0.05"
-                      min="0.05"
+                      value=".2"
+                      step=".05"
+                      min=".05"
                       max="1"
                       required /></label
                   ><label
@@ -157,7 +157,7 @@
                   ><input
                     id="cadence"
                     type="number"
-                    value="60"
+                    value="240"
                     min="1"
                     max="1000"
                     step="1"
@@ -193,10 +193,10 @@
                     ><input
                       id="max-thrust"
                       type="number"
-                      value="2.5"
-                      min="0.1"
+                      value="50"
+                      min=".1"
                       max="86"
-                      step="0.1"
+                      step=".1"
                       required
                   /></label>
                   <label
@@ -204,15 +204,16 @@
                     ><input
                       id="max-acceleration"
                       type="number"
-                      value="0.005"
-                      min="0.0001"
+                      value=".1"
+                      min=".0001"
                       max="1"
-                      step="0.0001"
+                      step=".0001"
                       required
                   /></label>
                 </div>
                 <label
-                  >Playback speed<select id="playback-speed">
+                  >Near-port speed <span>m/s</span><input id="near-speed" type="number" value="0.3" min="0.005" max="20" step="0.005" required /></label>
+                <label>Playback speed<select id="playback-speed">
                     <option value="1">1× · real time</option>
                     <option value="5">5× · accelerated</option>
                     <option value="20">20× · accelerated</option>
@@ -407,8 +408,8 @@
               <span id="capture-status">Awaiting approach</span>
             </div>
             <p>
-              A shared range of at most 1.25 m. Low relative speed, aligned
-              ports, and stable rotation.
+              A 2 cm shared gate by default, configurable up to 3 cm. Capture requires
+              low relative speed, aligned ports, and stable rotation.
             </p>
             <div id="capture-checks" class="capture-checks"></div>
             <button id="dock" class="secondary-button" disabled>
@@ -462,6 +463,13 @@
             <h3>Applied thrust <span>N</span></h3>
             <output id="thrust">X 0.00 / Y 0.00 / Z 0.00</output
             ><span id="command-status">No actuator command</span>
+            <h3>Applied torque <span>N·m</span></h3>
+            <output id="torque">X 0.00 / Y 0.00 / Z 0.00</output>
+            <h3>Port attitude</h3>
+            <output id="attitude-error">Awaiting telemetry</output>
+            <h3>Rotation rate <span>rad/s</span></h3>
+            <output id="rotation-rate">X 0.000 / Y 0.000 / Z 0.000</output>
+            <p class="field-help">Nozzle plumes illustrate applied thrust and torque.</p>
           </div>
           <div id="decisions" aria-live="polite">
             <div class="empty-log">

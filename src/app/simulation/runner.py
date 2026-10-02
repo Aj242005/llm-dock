@@ -265,8 +265,15 @@ class SimulationRunner:
                     target_velocity_mps=[0, 0, 0],
                     closing_speed_mps=0,
                     rationale="Local safety controller: brake during abort or sensor loss.",
+                    maneuver_mode="hold",
                 )
                 self._guidance_mode = "abort_braking" if aborting else "sensor_braking"
+            if (
+                active_subgoal is not None
+                and active_subgoal.maneuver_mode == "approach"
+                and not (aborting or sensor_stale)
+            ):
+                active_subgoal = self._continuous_approach(active_subgoal, observed)
             command = (
                 # The simulator's independent safety channel uses truth during
                 # injected sensor faults, and never delegates braking to PPO.
@@ -277,6 +284,7 @@ class SimulationRunner:
                         target_velocity_mps=[0, 0, 0],
                         closing_speed_mps=0,
                         rationale="Independent safety braking",
+                        maneuver_mode="hold",
                     ),
                     dt,
                     safety_context,
@@ -483,6 +491,27 @@ class SimulationRunner:
             subgoal = recovery_subgoal
         return subgoal, applied
 
+    def _continuous_approach(self, subgoal, state):
+        """Continue a nominal plan toward the port while translation and rotation run together."""
+        distance = float(np.linalg.norm(state.position))
+        limits = self.request.secondary.motion_limits
+        speed = min(
+            self._relative_speed_cap(state),
+            limits.max_speed_mps,
+            subgoal.closing_speed_mps,
+        )
+        velocity = -state.position / max(distance, 1e-9) * speed
+        velocity = limit_velocity(
+            velocity + np.asarray(self.request.primary.velocity_mps), limits
+        ) - np.asarray(self.request.primary.velocity_mps)
+        return subgoal.model_copy(
+            update={
+                "target_position_m": [0.0, 0.0, 0.0],
+                "target_velocity_mps": velocity.tolist(),
+                "closing_speed_mps": float(np.linalg.norm(velocity)),
+            }
+        )
+
     def _motion_envelope(self, state: RigidBodyState) -> MotionLimits:
         """Bound applied velocity by speed limits and conservative stopping distance."""
         limits = self.request.secondary.motion_limits.model_copy()
@@ -495,26 +524,38 @@ class SimulationRunner:
         """Stopping distance applies to port-relative speed, even for a moving target."""
         cfg = self.request.config
         distance = float(np.linalg.norm(state.position))
+        orbital = self.request.primary.orbital_elements or self.request.secondary.orbital_elements
+        n = orbital.mean_motion_radps or mean_motion_radps(orbital.semi_major_axis_m)
+        drift = (
+            propagate_chaser(state, cfg.step_interval_s, n).velocity - state.velocity
+        ) / cfg.step_interval_s
+        braking = max(
+            1e-6,
+            min(cfg.max_acceleration_mps2, cfg.max_thrust_n / state.mass_kg)
+            - float(np.linalg.norm(drift)),
+        )
+        capture = min(
+            cfg.dock_position_tol_m,
+            self.request.primary.capture_radius_m,
+            self.request.secondary.capture_radius_m,
+        )
+        remaining = max(0.0, distance - capture * 0.5)
+        # The local controller executes braking every tick, independently of LLM
+        # latency. Reserve integration time rather than an entire provider cadence.
+        reserve = max(cfg.step_interval_s * 2, 0.5)
+        cap = -braking * reserve + np.sqrt((braking * reserve) ** 2 + 2 * braking * remaining)
+        near_speed = cfg.near_port_speed_mps * 0.95
         if distance > 5:
-            orbital = (
-                self.request.primary.orbital_elements or self.request.secondary.orbital_elements
+            # Start braking before entering the near-port envelope. Enforcing
+            # a lower limit only after crossing 5 m creates an abrupt boundary.
+            near_cap = -braking * reserve + np.sqrt(
+                (braking * reserve) ** 2 + near_speed**2 + 2 * braking * (distance - 5)
             )
-            n = orbital.mean_motion_radps or mean_motion_radps(orbital.semi_major_axis_m)
-            drift = (
-                propagate_chaser(state, cfg.step_interval_s, n).velocity - state.velocity
-            ) / cfg.step_interval_s
-            braking = max(
-                1e-6,
-                min(cfg.max_acceleration_mps2, cfg.max_thrust_n / state.mass_kg)
-                - float(np.linalg.norm(drift)),
-            )
-            reserve = cfg.planner_reserve_s + cfg.step_interval_s * cfg.llm_cadence_steps
-            available = max(0, distance - 5)
-            cap = -braking * reserve + np.sqrt(
-                (braking * reserve) ** 2 + cfg.near_port_speed_mps**2 + 2 * braking * available
-            )
+            cap = min(cap, near_cap)
         else:
-            cap = min(cfg.near_port_speed_mps, cfg.dock_velocity_tol_mps * 0.95)
+            cap = min(cap, near_speed)
+        if distance <= max(0.1, capture * 4):
+            cap = min(cap, cfg.dock_velocity_tol_mps * 0.8)
         return float(cap)
 
     async def _plan(
@@ -572,6 +613,11 @@ class SimulationRunner:
             secondary_limits=self.request.secondary.motion_limits.model_dump(),
             max_thrust_n=self.request.config.max_thrust_n,
             max_acceleration_mps2=self.request.config.max_acceleration_mps2,
+            approach_speed_limit_mps=min(
+                self._relative_speed_cap(observed),
+                self.request.secondary.motion_limits.max_speed_mps,
+            ),
+            capture_speed_mps=self.request.config.dock_velocity_tol_mps,
             mass_kg=observed.mass_kg,
             primary_velocity_mps=self.request.primary.velocity_mps,
         )
@@ -601,12 +647,28 @@ class SimulationRunner:
             source = "heuristic_fallback"
             notes.append("Rejected non-finite or diverging target.")
             target = np.asarray(subgoal.target_position_m)
+        attitude = np.asarray(subgoal.target_orientation_quat, dtype=float)
+        if not np.isfinite(attitude).all() or abs(np.linalg.norm(attitude) - 1) > 1e-3:
+            subgoal.target_orientation_quat = [1, 0, 0, 0]
+            notes.append("Invalid attitude target replaced with port alignment.")
+        rate = np.asarray(subgoal.target_angular_velocity_radps, dtype=float)
+        rate_size = np.linalg.norm(rate)
+        if rate_size > 0.05:
+            rate *= 0.05 / rate_size
+            subgoal.target_angular_velocity_radps = rate.tolist()
+            notes.append("Angular target limited to 0.05 rad/s.")
+        if range_m <= 5:
+            subgoal.target_orientation_quat = [1, 0, 0, 0]
+            subgoal.target_angular_velocity_radps = [0, 0, 0]
+        if inp.priority_change == "abort" or any(
+            a.type.value == "sensor_dropout" and "restored" not in a.detail for a in anomaly_details
+        ):
+            subgoal.maneuver_mode = "hold"
         limits = self._motion_envelope(observed)
         relative_limits = MotionLimits(
             max_speed_mps=min(
                 self._relative_speed_cap(observed),
                 limits.max_speed_mps,
-                self.heuristic.phase_speed_caps.get(inp.phase, 1.0),
             ),
             max_horizontal_speed_mps=limits.max_horizontal_speed_mps,
             max_vertical_speed_mps=limits.max_vertical_speed_mps,
@@ -657,22 +719,16 @@ class SimulationRunner:
             notes.append(
                 "Final approach aligned with the measured port vector, with capture-speed margin."
             )
-        # The position controller stops at its waypoint. A short RL lookahead
-        # point must not stall a long approach between planner calls.
-        travel = (
-            np.linalg.norm(velocity)
-            * self.request.config.step_interval_s
-            * self.request.config.llm_cadence_steps
-        )
         if (
-            range_m > 5
+            subgoal.maneuver_mode == "approach"
             and inp.priority_change != "abort"
             and not anomaly_details
-            and np.dot(velocity, observed.position) < 0
-            and distance_to_goal < min(range_m * 0.5, travel * 1.5)
         ):
-            subgoal.target_position_m = (observed.position * 0.5).tolist()
-            notes.append("Extended the inward waypoint to sustain motion until the next replan.")
+            subgoal = self._continuous_approach(subgoal, observed)
+            notes.append(
+                "Continuous port-directed translation and attitude alignment; "
+                f"current braking envelope {subgoal.closing_speed_mps:.3f} m/s."
+            )
         if not subgoal.alternatives:
             subgoal.alternatives = [
                 "Faster approach rejected: braking margin decreases.",
@@ -680,7 +736,7 @@ class SimulationRunner:
             ]
         if not subgoal.rl_assessment:
             subgoal.rl_assessment = (
-                "Learned velocity advice was adopted and bounded by the motion envelope."
+                "Learned advice informed the approach; continuous guidance sets the bounded port-directed velocity."
                 if "RL advisor adopted" in subgoal.rationale
                 else "Learned advice was available; the planner used a bounded port-directed maneuver."
                 if inp.rl_advisor

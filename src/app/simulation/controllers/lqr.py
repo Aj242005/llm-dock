@@ -23,7 +23,12 @@ import numpy as np
 
 from app.schemas.docking import ControllerType
 from app.schemas.events import LlmSubgoal
-from app.simulation.controllers.base import ControlContext, Controller
+from app.simulation.controllers.base import (
+    ControlContext,
+    Controller,
+    approach_force,
+    attitude_error,
+)
 from app.simulation.controllers.lqr_riccati import solve_continuous_are
 from app.simulation.dynamics import Command, RigidBodyState
 
@@ -128,20 +133,18 @@ class LqrController(Controller):
         #    relative to the docking-port frame (identity quat), so ψ̇ = ω and
         #    the rotational block is a driven double integrator. atan2 keeps
         #    180° errors exact and lets the LQR null roll as well as pointing.
-        w = float(state.quat[0])
-        v = state.quat[1:]
-        v_norm = float(np.linalg.norm(v))
-        if v_norm > 1e-12:
-            angle_err = (2.0 * np.arctan2(v_norm, w)) * (v / v_norm)
-        else:
-            angle_err = np.zeros(3)
-
-        omega_err = state.omega  # null body rates
+        angle_err, omega_err = attitude_error(state, subgoal)
 
         x = np.concatenate([r_err, v_err, angle_err, omega_err])
 
         u = -self.gain @ x
-        force = np.clip(u[:3], -MAX_FORCE_N, MAX_FORCE_N)
+        force = np.clip(
+            approach_force(state, subgoal, dt, self.n)
+            if subgoal.maneuver_mode == "approach"
+            else u[:3],
+            -MAX_FORCE_N,
+            MAX_FORCE_N,
+        )
         torque = np.clip(u[3:], -MAX_TORQUE_NM, MAX_TORQUE_NM)
         return Command(force_n=force, torque_nm=torque)
 

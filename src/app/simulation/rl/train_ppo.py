@@ -119,7 +119,7 @@ def main():
     metadata.update(
         python=platform.python_version(),
         torch=torch.__version__,
-        capture_range_m=1.25,
+        capture_range_m=0.02,
         initial_range_m=[5, 80],
         dt_s=1.0,
         observation="14 values: subgoal position/velocity error, quaternion, rotation rate, fuel",

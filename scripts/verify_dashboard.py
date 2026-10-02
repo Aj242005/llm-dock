@@ -13,7 +13,7 @@ from playwright.sync_api import sync_playwright
 
 
 def main():
-    output = Path(".impeccable/review")
+    output = Path(".impeccable/review/precision")
     output.mkdir(parents=True, exist_ok=True)
     errors = []
     results = {}
@@ -28,6 +28,9 @@ def main():
         page.goto("http://127.0.0.1:8000")
         page.get_by_text("Backend connected", exact=True).wait_for()
         page.evaluate("document.fonts.ready")
+        page.wait_for_function(
+            "document.querySelector('#iss-status').dataset.state === 'ready'", timeout=30000
+        )
         page.wait_for_timeout(1000)
         assert page.locator("#scene canvas").count() == 1
         page.screenshot(path=str(output / "desktop.png"), full_page=True)
@@ -41,17 +44,19 @@ def main():
 
         # Verify that absolute spacecraft coordinates become the correct relative range.
         page.locator("#satellite-fields details").first.evaluate("item => item.open = true")
+        page.locator("#s-position-y").fill("0")
+        page.locator("#s-position-z").fill("0")
         page.locator("#p-position-x").fill("100")
         page.locator("#s-position-x").fill("200")
         page.locator("#s-position-x").dispatch_event("change")
-        assert page.locator("#range").inner_text() == "100.00 m"
+        assert page.locator("#range").inner_text() == "100.000 m"
         for position in ["100.019", "1100.01"]:
             page.locator("#s-position-x").fill(position)
             page.locator("#s-position-x").dispatch_event("change")
             assert not page.locator("#mission-form").evaluate("form => form.checkValidity()")
         page.locator("#reset").click()
         assert page.locator("#mission-form").evaluate("form => form.checkValidity()")
-        assert page.locator("#range").inner_text() == "100.00 m"
+        assert page.locator("#range").inner_text() == "100.000 m"
         assert page.locator("#playback-speed").input_value() == "1"
         results["initial_separation_validation"] = "100 m default; 0.02–1000 m permitted"
 
@@ -61,6 +66,8 @@ def main():
             page.locator("#start-range-min").fill("5")
             page.locator("#start-range-max").fill("10")
             page.locator("#s-position-x").fill("7.5")
+            page.locator("#s-position-y").fill("0")
+            page.locator("#s-position-z").fill("0")
             page.locator("#s-position-x").dispatch_event("change")
             page.locator("#provider").select_option("heuristic")
             page.locator("#playback-speed").select_option("200")
@@ -77,7 +84,14 @@ def main():
             page.locator("#start").click()
         assert created.value.status == 202, created.value.text()
         page.wait_for_function("document.querySelectorAll('.decision').length > 0", timeout=180000)
-        page.wait_for_timeout(1500)
+        page.wait_for_function(
+            "Number(document.querySelector('#scene').dataset.activeJets) > 0", timeout=30000
+        )
+        results["active_thruster_jets"] = int(
+            page.locator("#scene").get_attribute("data-active-jets")
+        )
+        page.locator('[data-camera="chaser"]').click()
+        page.wait_for_timeout(800)
         page.screenshot(path=str(output / "desktop-live.png"), full_page=True)
         page.wait_for_function(
             "document.querySelector('#phase').textContent === 'Docking complete'",
@@ -86,6 +100,8 @@ def main():
         assert page.locator("#capture-announcement").is_visible()
         assert page.locator("#capture-checks .passed").count() == 4
         assert page.locator("#dock").is_disabled()
+        page.locator('[data-camera="port"]').click()
+        page.locator("#scene").scroll_into_view_if_needed()
         page.wait_for_timeout(1000)
         page.screenshot(path=str(output / "desktop-complete.png"), full_page=True)
         for width in [320, 390]:
@@ -111,6 +127,7 @@ def main():
         results["hybrid"] = {
             "session": session_id,
             "learned_advice_enabled": learned,
+            "final_range_m": export["events"][-1].get("final_secondary", {}).get("position_m"),
             "summary": export["summary"],
         }
 

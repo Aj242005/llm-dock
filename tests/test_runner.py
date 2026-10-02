@@ -34,8 +34,8 @@ async def test_heuristic_lqr_docks_from_50m():
     assert summary.steps_completed < 400
     final = summary.final_secondary
     assert final is not None
-    assert np.linalg.norm(final.position_m) <= 1.25
-    assert np.linalg.norm(final.velocity_mps) <= 0.1
+    assert np.linalg.norm(final.position_m) <= 0.02
+    assert np.linalg.norm(final.velocity_mps) <= 0.005
     assert summary.metrics.total_llm_calls > 0
     # Every event type we expect shows up in the log.
     types = {e.type for e in session.event_log}

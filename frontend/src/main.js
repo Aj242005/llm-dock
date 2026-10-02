@@ -50,16 +50,16 @@ function fields(prefix, label, primary) {
   const triple = (name, title, unit, values) =>
     `<div class="group-label">${title}<span>${unit}</span></div><div class="triplet">${["x", "y", "z"].map((axis, i) => `<label>${axis.toUpperCase()}<input id="${prefix}-${name}-${axis}" type="number" value="${values[i]}" step="${name === "position" ? "any" : "0.01"}" required aria-label="${label} ${title} ${axis}"></label>`).join("")}</div>`;
   return `<details ${primary ? "" : "open"}><summary>${label}</summary><div class="satellite-name"><b class="${primary ? "primary" : "secondary"}-key"></b>${primary ? "Target docking port" : "Approaching docking port"}</div>
-  ${triple("position", "Position", "m", primary ? [0, 0, 0] : [100, 0, 0])}
+  ${triple("position", "Position", "m", primary ? [0, 0, 0] : [80, 48, 36])}
   ${!primary ? '<p class="field-help">100 m by default. Any starting port distance from 2 cm to 1 km is allowed.</p>' : ""}
   ${!primary ? '<button id="randomize" class="random-button" type="button"><i data-lucide="shuffle"></i>Randomize secondary position</button>' : ""}
   ${triple("velocity", "Velocity", "m/s", [0, 0, 0])}
-  ${triple("attitude", "Attitude · roll / pitch / yaw", "deg", [0, 0, 0])}
+  ${triple("attitude", "Attitude · roll / pitch / yaw", "deg", primary ? [0, 0, 0] : [15, -20, 35])}
   ${triple("omega", "Rotation rate", "rad/s", [0, 0, 0])}
   <div class="pair"><label>Mass <span>kg</span><input id="${prefix}-mass" type="number" value="500" min="1" max="100000" step="1" required></label><label>Fuel <span>%</span><input id="${prefix}-fuel" type="number" value="100" min="0" max="100" step="0.1" required></label></div>
-  <div class="pair"><label>Min. transit speed <span>m/s</span><input id="${prefix}-min" type="number" value="0" min="0" max="20" step="0.01" required></label><label>Max. speed <span>m/s</span><input id="${prefix}-max" type="number" value="${primary ? 2 : 0.1}" min="0.01" max="20" step="0.01" required></label></div>
-  <div class="pair"><label>Max. horizontal <span>m/s</span><input id="${prefix}-horizontal" type="number" value="${primary ? 2 : 0.1}" min="0.01" max="20" step="0.01" required></label><label>Max. vertical <span>m/s</span><input id="${prefix}-vertical" type="number" value="${primary ? 1 : 0.05}" min="0.01" max="20" step="0.01" required></label></div>
-  <label>Port capture radius <span>m</span><input id="${prefix}-radius" type="number" value="1.25" min="0.01" max="1.25" step="0.01" required></label>
+  <div class="pair"><label>Min. transit speed <span>m/s</span><input id="${prefix}-min" type="number" value="0" min="0" max="20" step="0.01" required></label><label>Max. speed <span>m/s</span><input id="${prefix}-max" type="number" value="2" min="0.01" max="20" step="0.01" required></label></div>
+  <div class="pair"><label>Max. horizontal <span>m/s</span><input id="${prefix}-horizontal" type="number" value="2" min="0.01" max="20" step="0.01" required></label><label>Max. vertical <span>m/s</span><input id="${prefix}-vertical" type="number" value="2" min="0.01" max="20" step="0.01" required></label></div>
+  <label>Port capture radius <span>m</span><input id="${prefix}-radius" type="number" value="0.02" min="0.005" max="0.03" step="0.001" required></label>
   ${primary ? '<label>Orbital semi-major axis <span>m</span><input id="orbit" type="number" value="6878000" min="6371000" step="1" required></label>' : ""}
   <p class="field-help">Zero speed is permitted during braking and capture.</p></details>`;
 }
@@ -140,7 +140,7 @@ function payload() {
       ],
       max_thrust_n: number("max-thrust"),
       max_acceleration_mps2: number("max-acceleration"),
-      near_port_speed_mps: Math.min(0.02, number("capture-speed")),
+      near_port_speed_mps: number("near-speed"),
       max_range_m: 1000,
       playback_speed: number("playback-speed"),
       fuel_consumption_rate_pct_per_s: 0.001,
@@ -184,7 +184,7 @@ function preview() {
     },
     true,
   );
-  $("range").innerHTML = `${norm(relative).toFixed(2)} <small>m</small>`;
+  $("range").innerHTML = `${norm(relative).toFixed(3)} <small>m</small>`;
   $("speed").innerHTML = `${norm(velocity).toFixed(3)} <small>m/s</small>`;
   $("fuel").innerHTML =
     `${data.secondary.fuel_remaining_pct.toFixed(1)} <small>%</small>`;
@@ -331,6 +331,9 @@ function renderDecision(event) {
     {
       tools: event.tool_results,
       learned_advice: event.rl_advisor || "No learned advice used",
+      maneuver_mode: event.subgoal.maneuver_mode,
+      target_orientation_quat_wxyz: event.subgoal.target_orientation_quat,
+      target_angular_velocity_radps: event.subgoal.target_angular_velocity_radps,
       learned_advice_status: event.rl_advisor_status,
       learned_advice_reason: event.rl_advisor_reason,
       recovery_maneuver: event.recovery_subgoal,
@@ -377,14 +380,14 @@ function chart() {
   const span = right - 24;
   $("range-chart").setAttribute("viewBox", `0 0 ${width} 150`);
   const maxTime = samples.at(-1)[0] || 1;
-  const maxRange = Math.max(1.25, ...samples.map((s) => s[1]));
+  const maxRange = Math.max(number("capture-range"), ...samples.map((s) => s[1]));
   const points = samples
     .map(
       ([time, range]) =>
         `${24 + (time / maxTime) * span},${120 - (range / maxRange) * 95}`,
     )
     .join(" ");
-  const gateY = 120 - (1.25 / maxRange) * 95;
+  const gateY = 120 - (number("capture-range") / maxRange) * 95;
   $("range-chart").innerHTML =
     `<path d="M24 20V120H${right}" fill="none" stroke="#40545f"/><line x1="24" x2="${right}" y1="${gateY}" y2="${gateY}" stroke="#779bd0" stroke-dasharray="4 4"/><polyline points="${points}" fill="none" stroke="#8fd9c4" stroke-width="2"/><text x="24" y="143">0 s</text><text x="${right}" y="143" text-anchor="end">${maxTime.toFixed(1)} s</text><text x="24" y="13">${maxRange.toFixed(1)} m</text>`;
 }
@@ -397,8 +400,9 @@ function telemetry(event) {
     running,
     primary_capture_radius_m: number("p-radius"),
     secondary_capture_radius_m: number("s-radius"),
+    max_thrust_n: number("max-thrust"),
   });
-  $("range").innerHTML = `${event.range_m.toFixed(2)} <small>m</small>`;
+  $("range").innerHTML = `${event.range_m.toFixed(3)} <small>m</small>`;
   $("speed").innerHTML =
     `${norm(event.velocity_mps).toFixed(3)} <small>m/s</small>`;
   $("fuel").innerHTML = `${event.fuel_pct.toFixed(1)} <small>%</small>`;
@@ -409,6 +413,11 @@ function telemetry(event) {
     event.secondary_velocity_mps,
   );
   $("thrust").textContent = formatVector(event.command_force_n || [0, 0, 0], 2);
+  $("torque").textContent = formatVector(event.command_torque_nm || [0, 0, 0], 2);
+  $("rotation-rate").textContent = formatVector(event.angular_velocity_radps || [0, 0, 0]);
+  const attitude = event.orientation_quat || [1, 0, 0, 0];
+  const angle = 2 * Math.acos(Math.min(1, Math.abs(attitude[0]) / norm(attitude))) * 180 / Math.PI;
+  $("attitude-error").textContent = `${angle.toFixed(2)} deg from target`;
   $("command-status").textContent = event.command_limited
     ? "Command adjusted to motion limits"
     : "Within configured actuator envelope";
@@ -482,6 +491,7 @@ $("mission-form").addEventListener("submit", async (event) => {
             captured: type === "docked",
             primary_capture_radius_m: number("p-radius"),
             secondary_capture_radius_m: number("s-radius"),
+    max_thrust_n: number("max-thrust"),
           });
         $("scene-state").textContent =
           type === "docked" ? "Capture confirmed" : "Session ended";
@@ -490,7 +500,7 @@ $("mission-form").addEventListener("submit", async (event) => {
           $("dock").textContent = "Docking capture complete";
           $("capture-announcement").hidden = false;
           $("capture-result").textContent =
-            `${latest.range_m.toFixed(3)} m port separation · ${norm(latest.velocity_mps).toFixed(3)} m/s relative speed`;
+            `${(latest.range_m * 100).toFixed(2)} cm port separation · ${norm(latest.velocity_mps).toFixed(3)} m/s relative speed`;
         }
         $("command-status").textContent =
           "Last applied command · session ended";

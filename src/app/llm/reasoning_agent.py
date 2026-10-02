@@ -53,6 +53,57 @@ class ReasoningInput(BaseModel):
     max_acceleration_mps2: float = 1.0
     mass_kg: float = 500.0
     primary_velocity_mps: list[float] = Field(default_factory=lambda: [0, 0, 0])
+    approach_speed_limit_mps: float = 2.0
+    capture_speed_mps: float = 0.005
+    max_angular_speed_radps: float = 0.05
+
+
+DOCKING_SYSTEM_PROMPT = """You plan coordinated six-degree-of-freedom spacecraft docking maneuvers.
+Objective: bring the secondary docking port to the primary docking port at [0,0,0],
+with aligned attitude, low relative velocity and low angular rate. Plan translation
+and rotation together; do not wait for translation to finish before aligning.
+
+Coordinates and actuator contract:
+- Positions and velocities use the local orbital frame, in metres and m/s.
+  X/Y are horizontal and Z is vertical. Use all three components required by the
+  measured displacement. A direct path is appropriate when clear.
+- Quaternions are scalar-first [w,x,y,z]. The docked secondary attitude relative
+  to the primary is [1,0,0,0]. Command target_orientation_quat and
+  target_angular_velocity_radps alongside target_position_m and target_velocity_mps.
+  Rotate toward alignment while translating. Do not invent spin when already aligned.
+- Forces act in the local frame, torques in the body frame. Independent controllers
+  track both targets continuously and enforce actuator limits.
+- secondary_limits constrain the chaser's absolute velocity. primary_limits apply
+  only to the primary. Do not substitute primary limits for the secondary envelope.
+  With a moving primary, add primary_velocity_mps before checking chaser limits.
+
+Approach policy:
+- Normally submit maneuver_mode='approach', target_position_m=[0,0,0] and inward
+  velocity. approach_speed_limit_mps already includes configured speed limits and
+  stopping distance. Use this budget; do not impose an arbitrary 0.1 m/s mission cap.
+- Intermediate guidance must not become a mandatory stop. Local control rechecks
+  range, updates velocity and brakes near the port between provider responses.
+- Inspect attitude error and rotation rate. Normally command the final aligned
+  quaternion and zero angular rate concurrently with inward translation.
+- Use maneuver_mode='hold' for explicit abort, sensor loss, or a justified unsafe
+  condition. Explain it. A half-range waypoint is not capture.
+- Final precision comes from inspect_capture_gate: normally 0.02 m separation
+  and 0.005 m/s relative speed. Aim for the origin, not the gate edge. Do not
+  announce capture; every gate check and the runner must confirm it.
+
+Evidence and timing:
+- Readings are timestamped snapshots. Physics continues while you plan and targets
+  are checked against current state. You have no direct actuator access.
+- Inspect the PPO proposal. It is advisory and may use a different training
+  envelope. Adopt, limit or reject with a measured reason; never claim null advice
+  when present. Do not copy its short lookahead position as a stopping point.
+- Initial tool readings are supplied. Call additional tools when useful, then
+  submit one maneuver promptly. Avoid repeated unchanged tool queries.
+- Give a short operator rationale covering direction, speed, simultaneous attitude
+  correction, braking and precision. Provide rejected alternatives and an explicit
+  RL assessment. These are decision explanations, not private deliberation.
+  Never claim hardware validation.
+"""
 
 
 def build_prompt(snapshot):
@@ -131,13 +182,16 @@ class HeuristicAgent(ReasoningAgent):
                     target_velocity_mps=[0.0, 0.0, 0.0],
                     closing_speed_mps=0.0,
                     rationale="Sensor reading stale: hold and brake until readings are restored.",
+                    maneuver_mode="hold",
                 )
             adopted = self._adopt_rl_advisor(input_data, phase)
             if adopted is not None:
                 return adopted
             target_pos = r * (0.6 if phase == DockingPhase.FAR_RENDEZVOUS.value else 0.5)
             closing = min(
-                self.phase_speed_caps.get(phase, 1.0),
+                input_data.approach_speed_limit_mps
+                if input_data.secondary_limits
+                else self.phase_speed_caps.get(phase, 1.0),
                 float(0.25 * np.sqrt(np.linalg.norm(r))),
             )
             target_vel = -target_pos / max(np.linalg.norm(target_pos), 1e-9) * closing
@@ -151,6 +205,7 @@ class HeuristicAgent(ReasoningAgent):
             target_velocity_mps=[float(v) for v in target_vel],
             closing_speed_mps=float(closing),
             rationale=rationale,
+            maneuver_mode="hold" if input_data.priority_change == "abort" else "approach",
         )
 
     def _adopt_rl_advisor(self, input_data: ReasoningInput, phase: str) -> LlmSubgoal | None:
@@ -173,10 +228,15 @@ class HeuristicAgent(ReasoningAgent):
         target_pos = r * 0.5
 
         cap = self.phase_speed_caps.get(phase, 1.0)
+        if input_data.secondary_limits:
+            cap = input_data.approach_speed_limit_mps
         v_norm = float(np.linalg.norm(target_vel))
         if v_norm > cap:
             target_vel = target_vel / v_norm * cap
         closing = min(float(np.linalg.norm(target_vel)), sugg.closing_speed_mps)
+        if input_data.secondary_limits:
+            closing = cap
+            target_vel = -r / max(current_range, 1e-9) * closing
         rationale = (
             f"RL advisor adopted (lookahead {sugg.lookahead_s:.0f}s): follow policy "
             f"suggestion at {closing:.3f} m/s (range {current_range:.1f} -> {suggested_range:.1f} m)."
@@ -277,6 +337,9 @@ class LangChainAgent(ReasoningAgent):
             rationale,
             alternatives=None,
             rl_assessment="",
+            maneuver_mode="approach",
+            target_orientation_quat=None,
+            target_angular_velocity_radps=None,
         ):
             return LlmSubgoal(
                 target_position_m=target_position_m,
@@ -285,6 +348,9 @@ class LangChainAgent(ReasoningAgent):
                 rationale=rationale,
                 alternatives=alternatives or [],
                 rl_assessment=rl_assessment,
+                maneuver_mode=maneuver_mode,
+                target_orientation_quat=target_orientation_quat or [1, 0, 0, 0],
+                target_angular_velocity_radps=target_angular_velocity_radps or [0, 0, 0],
             )
 
         submit = StructuredTool.from_function(
@@ -298,29 +364,7 @@ class LangChainAgent(ReasoningAgent):
         self.last_tools = [{"name": t.name, "result": t.invoke({})} for t in tools[:4]]
         chat = self.chat.bind_tools(tools + [submit])
         messages = [
-            SystemMessage(
-                content=(
-                    "Plan a satellite docking subgoal in a local frame: X/Y horizontal, Z vertical. "
-                    "Use the read-only tools to inspect separation, capture, motion limits and learned PPO advice. "
-                    "Submit one maneuver. Reduce separation, brake before capture, and respect both envelopes. "
-                    "For an approach choose a port-directed waypoint around half the current separation. "
-                    "The controller brakes at that waypoint: do not copy an RL lookahead point only centimetres "
-                    "ahead, which would stall the approach before the next replan. Learned velocity is advisory. "
-                    "A positive minimum speed is only a transit preference; allow zero for braking and docking. "
-                    "For abort hold current position and brake. For sensor loss brake conservatively. "
-                    "Compare learned advice against limits and explain adoption or rejection. "
-                    "RL availability is given by inspect_rl_heuristic; never claim advice is missing "
-                    "when its proposal is present. Its status distinguishes disabled from inference failure. "
-                    "Physics continues while you plan; readings are timestamped snapshots. "
-                    "Your response is rechecked against the latest state. Preserve large braking margins. "
-                    "Provide rationale in plain natural-language sentences for an operator: explain measured "
-                    "separation and velocity, the chosen direction and safe speed, and why it fits the readings. "
-                    "Provide rl_assessment explaining adoption, limitation or rejection of the learned advice. "
-                    "Explain rejected alternatives in ordinary language. These are decision explanations, "
-                    "not private deliberation. "
-                    "Capture is independently gated at at most 1.25 m. Do not claim capture yourself."
-                )
-            ),
+            SystemMessage(content=DOCKING_SYSTEM_PROMPT),
             HumanMessage(
                 content=build_prompt(input_data) + "\nTool readings=" + json.dumps(self.last_tools)
             ),

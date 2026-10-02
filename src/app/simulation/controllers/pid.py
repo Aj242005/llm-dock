@@ -26,12 +26,15 @@ import numpy as np
 
 from app.schemas.docking import ControllerType
 from app.schemas.events import LlmSubgoal
-from app.simulation.controllers.base import ControlContext, Controller
+from app.simulation.controllers.base import (
+    ControlContext,
+    Controller,
+    approach_force,
+    attitude_error,
+)
 from app.simulation.dynamics import (
     Command,
     RigidBodyState,
-    quat_conjugate,
-    quat_multiply,
 )
 
 # Docking-port frame: Hill-frame aligned (identity quat) with nulled rates.
@@ -85,22 +88,15 @@ class PidController(Controller):
         vel_err = target_vel - state.velocity
 
         force = kp * pos_err + ki * ctx.position_integral + kd * vel_err
+        if subgoal.maneuver_mode == "approach":
+            force = approach_force(state, subgoal, dt)
         force = np.clip(force, -MAX_FORCE_N, MAX_FORCE_N)
 
         # ---- attitude loop: drive the full attitude to the docking-port
         #      frame (identity quat), nulling body rates. The rotation vector
         #      via atan2 handles 180° errors exactly.
-        dq = quat_multiply(quat_conjugate(state.quat), _IDENTITY_QUAT)
-        if dq[0] < 0:
-            dq = -dq
-        w = float(dq[0])
-        v = dq[1:]
-        v_norm = float(np.linalg.norm(v))
-        if v_norm > 1e-12:
-            rot_vec = (2.0 * np.arctan2(v_norm, w)) * (v / v_norm)
-        else:
-            rot_vec = np.zeros(3)
-        torque = state.inertia * (0.008 * rot_vec - 0.18 * state.omega)
+        rot_vec, rate_error = attitude_error(state, subgoal)
+        torque = state.inertia * (-0.008 * rot_vec - 0.18 * rate_error)
         torque = np.clip(torque, -MAX_TORQUE_NM, MAX_TORQUE_NM)
 
         return Command(force_n=force, torque_nm=torque)

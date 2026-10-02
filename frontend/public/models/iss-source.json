@@ -7,5 +7,5 @@
   "local_sha256": "1912dd804f3e455243596dcd1a5c4a46b2f148d78deaaa03005babe267300bcd",
   "local_bytes": 5600896,
   "processing": "glTF Transform4.5.1; no mesh simplification; preserved named nodes; meshopt compression, deduplication, 1024px WebP textures",
-  "display_alignment": "PMA2 forward tip approx [0,-0.1006,21.00535]m; translated to local port origin and rotated90deg aboutY; source span~112m."
+  "display_alignment": "PMA-2 forward docking-face centre [0.004878,-0.673222,21.005283] m; measured from front-plane mesh vertices, translated to [0,0,0] and rotated 90 deg about Y. Source span approximately 112 m."
 }

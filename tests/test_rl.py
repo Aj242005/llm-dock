@@ -119,7 +119,7 @@ def test_docked_termination_grants_success_reward():
     env.reset()
     # Park the chaser right at the port with aligned attitude.
     env._state = RigidBodyState(
-        position=np.array([0.2, 0.0, 0.0]),
+        position=np.array([0.01, 0.0, 0.0]),
         velocity=np.zeros(3),
         quat=np.array([1.0, 0.0, 0.0, 0.0]),
         omega=np.zeros(3),

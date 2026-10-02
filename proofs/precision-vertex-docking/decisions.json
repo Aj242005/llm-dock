@@ -1,0 +1,347 @@
+[
+  {
+    "schema_version": "1.0",
+    "session_id": "2eb390f11c684a059e90ed9f2db70f22",
+    "event_id": 126,
+    "step": 122,
+    "sim_time_s": 24.400000000000002,
+    "type": "llm_decision",
+    "phase": "closing",
+    "subgoal": {
+      "target_position_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "target_velocity_mps": [
+        -1.600722847526497,
+        -0.9593441019843589,
+        -0.7192671683001299
+      ],
+      "closing_speed_mps": 2.0,
+      "maneuver_mode": "approach",
+      "target_orientation_quat": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "target_angular_velocity_radps": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rationale": "Initiating direct long-range approach toward the docking port at [0, 0, 0] along the line of sight [-0.8, -0.48, -0.36] using the full configured approach speed limit of 2.0 m/s (vx=-1.6, vy=-0.96, vz=-0.72 m/s). Concurrently commanding target orientation [1, 0, 0, 0] with zero angular rate to eliminate the initial 45.3 deg attitude error early during the transit, well before reaching braking range. Precision capture gate remains the terminal goal.",
+      "alternatives": [
+        "Adopt RL short-horizon waypoint [79.2, 47.22, 35.2] at 0.65 m/s: rejected as it creates an unnecessary intermediate stop and underutilizes the 2.0 m/s approach envelope at 100m range.",
+        "Station-keeping hold maneuver: rejected because all systems are nominal, sensor readings are valid, and closing toward capture is unobstructed."
+      ],
+      "rl_assessment": "The RL policy provides an inward direction vector consistent with the line of sight, but recommends a short 4-second lookahead position ([79.2, 47.22, 35.2]) and a conservative closing speed of ~0.65 m/s. We adopt the inward guidance direction but reject the low velocity and short waypoint to utilize the permitted 2.0 m/s approach speed limit at 100 m distance."
+    },
+    "source": "vertex",
+    "anomaly_context": [],
+    "priority_change": null,
+    "metrics_so_far": {
+      "delta_v_mps": 0.0,
+      "ise": 244105.32645662862,
+      "max_commanded_thrust_n": 0.0,
+      "total_llm_calls": 1,
+      "llm_fallback_calls": 0,
+      "anomaly_events_count": 0
+    },
+    "rl_advisor": {
+      "suggested_position_m": [
+        79.2,
+        47.22330470085144,
+        35.2
+      ],
+      "suggested_velocity_mps": [
+        -0.4,
+        -0.3883476495742798,
+        -0.4
+      ],
+      "closing_speed_mps": 0.649432208919099,
+      "lookahead_s": 4.0,
+      "policy_source": "rl"
+    },
+    "rl_advisor_status": "available",
+    "rl_advisor_reason": null,
+    "tool_results": [
+      {
+        "name": "measure_distance",
+        "result": {
+          "distance_m": 100.0,
+          "relative_speed_mps": 0.0,
+          "closing_speed_mps": -0.0,
+          "attitude_error_deg": 45.29182668512507,
+          "angular_speed_radps": 0.0
+        }
+      },
+      {
+        "name": "inspect_capture_gate",
+        "result": {
+          "eligible": false,
+          "checks": {
+            "range": false,
+            "relative_speed": true,
+            "alignment": false,
+            "rotation_rate": true
+          },
+          "shared_range_m": 0.02
+        }
+      },
+      {
+        "name": "inspect_actuators",
+        "result": {
+          "force_per_axis_n": 50.0,
+          "max_total_thrust_n": 50.0,
+          "max_acceleration_mps2": 0.1,
+          "mass_kg": 500.0,
+          "torque_per_axis_nm": 20.0,
+          "current_approach_speed_limit_mps": 2.0,
+          "capture_speed_mps": 0.005,
+          "target_angular_speed_limit_radps": 0.05,
+          "primary_limits": {
+            "min_speed_mps": 0.0,
+            "max_speed_mps": 2.0,
+            "max_horizontal_speed_mps": 2.0,
+            "max_vertical_speed_mps": 1.0
+          },
+          "secondary_limits": {
+            "min_speed_mps": 0.0,
+            "max_speed_mps": 2.0,
+            "max_horizontal_speed_mps": 2.0,
+            "max_vertical_speed_mps": 2.0
+          },
+          "minimum_speed_rule": "Transit preference; braking and capture may use zero speed."
+        }
+      },
+      {
+        "name": "inspect_rl_heuristic",
+        "result": {
+          "available": true,
+          "status": "available",
+          "reason": null,
+          "proposal": {
+            "suggested_position_m": [
+              79.2,
+              47.22330470085144,
+              35.2
+            ],
+            "suggested_velocity_mps": [
+              -0.4,
+              -0.3883476495742798,
+              -0.4
+            ],
+            "closing_speed_mps": 0.649432208919099,
+            "lookahead_s": 4.0,
+            "policy_source": "rl"
+          }
+        }
+      },
+      {
+        "name": "preview_maneuver",
+        "arguments": {
+          "target_position_m": [
+            0,
+            0,
+            0
+          ],
+          "target_velocity_mps": [
+            -1.6,
+            -0.96,
+            -0.72
+          ]
+        },
+        "result": {
+          "target_range_m": 0.0,
+          "reduces_range": true,
+          "target_speed_mps": 2.0,
+          "within_motion_limits": true
+        }
+      }
+    ],
+    "safety_notes": [
+      "Continuous port-directed translation and attitude alignment; current braking envelope 2.000 m/s."
+    ],
+    "snapshot_step": 0,
+    "snapshot_sim_time_s": 0.0,
+    "plan_age_s": 24.400000000000002,
+    "applied": true,
+    "recovery_subgoal": null
+  },
+  {
+    "schema_version": "1.0",
+    "session_id": "2eb390f11c684a059e90ed9f2db70f22",
+    "event_id": 620,
+    "step": 613,
+    "sim_time_s": 122.60000000000001,
+    "type": "llm_decision",
+    "phase": "proximity",
+    "subgoal": {
+      "target_position_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "target_velocity_mps": [
+        -0.003325453727097169,
+        -0.0018052268721913333,
+        -0.001297117361249107
+      ],
+      "closing_speed_mps": 0.004,
+      "maneuver_mode": "approach",
+      "target_orientation_quat": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "target_angular_velocity_radps": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rationale": "Direct 3D inbound line-of-sight velocity vector toward docking port origin [0,0,0] scaled to 0.279 m/s, strictly within the approach speed limit of 0.285 m/s. Attitude alignment is maintained at [1,0,0,0] with zero angular velocity. Continuous LQR braking will decelerate the spacecraft as separation closes toward capture gate.",
+      "alternatives": [
+        "Holding position at range 2.49 m (rejected: flight corridor and actuators are nominal; premature hold halts docking progress)",
+        "Adopting RL suggested position [1.16, 0.60, 0.46] as explicit target (rejected: intermediate lookahead point would act as an artificial waypoint rather than guiding smoothly to port origin [0,0,0])"
+      ],
+      "rl_assessment": "The RL heuristic advises closing along [-0.216, -0.132, -0.082] m/s toward an intermediate lookahead at 1.16 m. The velocity direction aligns well with the line-of-sight to the port; however, the short lookahead position is rejected to prevent stopping mid-trajectory, maintaining origin [0,0,0] as the primary positional goal while respecting envelope speed limits."
+    },
+    "source": "vertex",
+    "anomaly_context": [],
+    "priority_change": null,
+    "metrics_so_far": {
+      "delta_v_mps": 4.396807325809835,
+      "ise": 513018.68743707705,
+      "max_commanded_thrust_n": 50.00000000000001,
+      "total_llm_calls": 2,
+      "llm_fallback_calls": 0,
+      "anomaly_events_count": 0
+    },
+    "rl_advisor": {
+      "suggested_position_m": [
+        1.1616545600143355,
+        0.6015315602442224,
+        0.45887560017905804
+      ],
+      "suggested_velocity_mps": [
+        -0.2163758140664469,
+        -0.1319969542648151,
+        -0.08151705257866312
+      ],
+      "closing_speed_mps": 0.2655691353703985,
+      "lookahead_s": 4.0,
+      "policy_source": "rl"
+    },
+    "rl_advisor_status": "available",
+    "rl_advisor_reason": null,
+    "tool_results": [
+      {
+        "name": "measure_distance",
+        "result": {
+          "distance_m": 2.487816399209383,
+          "relative_speed_mps": 0.2849977356548549,
+          "closing_speed_mps": 0.2849977356548549,
+          "attitude_error_deg": 0.056027944535831514,
+          "angular_speed_radps": 0.0003699721944120944
+        }
+      },
+      {
+        "name": "inspect_capture_gate",
+        "result": {
+          "eligible": false,
+          "checks": {
+            "range": false,
+            "relative_speed": false,
+            "alignment": true,
+            "rotation_rate": true
+          },
+          "shared_range_m": 0.02
+        }
+      },
+      {
+        "name": "inspect_actuators",
+        "result": {
+          "force_per_axis_n": 50.0,
+          "max_total_thrust_n": 50.0,
+          "max_acceleration_mps2": 0.1,
+          "mass_kg": 500.0,
+          "torque_per_axis_nm": 20.0,
+          "current_approach_speed_limit_mps": 0.285,
+          "capture_speed_mps": 0.005,
+          "target_angular_speed_limit_radps": 0.05,
+          "primary_limits": {
+            "min_speed_mps": 0.0,
+            "max_speed_mps": 2.0,
+            "max_horizontal_speed_mps": 2.0,
+            "max_vertical_speed_mps": 1.0
+          },
+          "secondary_limits": {
+            "min_speed_mps": 0.0,
+            "max_speed_mps": 2.0,
+            "max_horizontal_speed_mps": 2.0,
+            "max_vertical_speed_mps": 2.0
+          },
+          "minimum_speed_rule": "Transit preference; braking and capture may use zero speed."
+        }
+      },
+      {
+        "name": "inspect_rl_heuristic",
+        "result": {
+          "available": true,
+          "status": "available",
+          "reason": null,
+          "proposal": {
+            "suggested_position_m": [
+              1.1616545600143355,
+              0.6015315602442224,
+              0.45887560017905804
+            ],
+            "suggested_velocity_mps": [
+              -0.2163758140664469,
+              -0.1319969542648151,
+              -0.08151705257866312
+            ],
+            "closing_speed_mps": 0.2655691353703985,
+            "lookahead_s": 4.0,
+            "policy_source": "rl"
+          }
+        }
+      },
+      {
+        "name": "preview_maneuver",
+        "arguments": {
+          "target_position_m": [
+            0,
+            0,
+            0
+          ],
+          "target_velocity_mps": [
+            -0.232,
+            -0.126,
+            -0.0905
+          ]
+        },
+        "result": {
+          "target_range_m": 0.0,
+          "reduces_range": true,
+          "target_speed_mps": 0.27908824769237417,
+          "within_motion_limits": true
+        }
+      }
+    ],
+    "safety_notes": [
+      "Final approach aligned with the measured port vector, with capture-speed margin.",
+      "Continuous port-directed translation and attitude alignment; current braking envelope 0.279 m/s.",
+      "Target velocity reduced to the configured and phase envelope.",
+      "Continuous port-directed translation and attitude alignment; current braking envelope 0.004 m/s."
+    ],
+    "snapshot_step": 500,
+    "snapshot_sim_time_s": 100.0,
+    "plan_age_s": 22.60000000000001,
+    "applied": true,
+    "recovery_subgoal": null
+  }
+]

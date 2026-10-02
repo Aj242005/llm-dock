@@ -48,14 +48,17 @@ the speed inputs permit up to 20 m/s. These are simulator parameters, not a
 calibrated engine specification. A stopping-distance envelope brakes before entering
 the **0.3 m/s near-port zone**, then tightens to **0.004 m/s for capture**.
 Playback defaults to **1?**: each 0.2 s physics step is paced over 0.2 s of wall time.
-Translation and attitude alignment run together; intermediate waypoints do not
-require the spacecraft to stop. The provider's requested closing speed remains
+Fast rotation above 0.1 rad/s is damped while holding position first. Low-rate
+attitude alignment runs alongside XYZ transfer to a **5 m stand-off** on the
+primary port's positive X axis. Final approach requires stable alignment for
+**1 second** and lateral entry into a **5 cm docking-axis corridor**; these
+settings are editable. The provider's requested closing speed remains
 an upper limit, and live telemetry displays the force, torque, attitude error and rate.
 Accelerated playback is explicitly selectable for experiments and does not
 increase the physical speed limit. Physics, both spacecraft states, and SSE
 telemetry continue while Vertex plans in the background. The last accepted
-maneuver stays active; before the first response, the chaser coasts subject to
-the motion and stopping-distance envelope. Abort and sensor-loss braking act
+maneuver stays active; before the first response, local detumbling can run and
+translation remains subject to the motion and stopping-distance envelope. Abort and sensor-loss braking act
 locally without waiting for a provider. One provider request runs at a time.
 Returned plans are checked against current state and limits; responses older
 than one planning interval plus the reserve, or with changed fault context, are
@@ -135,18 +138,33 @@ session export are saved in `.impeccable/review/`.
    Relative speed must be at most the configured tolerance (**0.005 m/s** default,
    maximum 0.01 m/s), attitude error at most **1 degree** by default, and relative
    rotation at most **0.01 rad/s**. Manual and automatic capture share the same
-   gate. Abort and stale sensor readings inhibit capture.
+   gate, including stable alignment and the docking-axis corridor. Abort and stale sensor readings inhibit capture.
+
+Propellant consumption follows applied impulse: resultant engine thrust divided
+by `specific_impulse_s * g0`, plus each torque-axis demand divided by the RCS
+lever arm and `rcs_specific_impulse_s * g0`. Defaults are a **25 kg tank**, **220 s
+engine Isp**, **60 s RCS Isp**, and **0.75 m torque lever arm**, all editable.
+Coasting consumes no propellant; rotational thrusters do. Remaining kilograms,
+used kilograms and current mass flow appear in the right panel. Mass and inertia
+decrease with propellant use; commands are reduced if the tank empties during a
+step. An explicitly supplied `fuel_consumption_rate_pct_per_s` is a legacy
+load-proportional override; the dashboard omits it and uses the impulse model.
 
 
 The Three.js spacecraft are schematic models with docking-port origins. Mesh
 sizes and animations are visual aids; backend coordinates determine numerical
-results. The physics is a local linearized model; fuel is simplified. Contact
+results. The physics is a local linearized model; fuel uses an equivalent-thruster
+model with assumed engine efficiency and geometry. Contact
 mechanics, body collision, sensor estimation, structural dynamics, actual
 communications latency, and flight hardware are outside this simulator.
 **This is research software, not flight-certified software.**
 
 The live-session code audit, regression results, original reference run, and
 verified Vertex-with-PPO trace are in [`proofs/code-audit/README.md`](proofs/code-audit/README.md).
+
+The current tumbling-case verification, physical propellant accounting and
+stable port-axis approach are in
+[`proofs/aligned-propellant-vertex-final/README.md`](proofs/aligned-propellant-vertex-final/README.md).
 
 The coordinated 2 cm live demonstration and its full telemetry are in
 [`proofs/precision-vertex-docking/README.md`](proofs/precision-vertex-docking/README.md).

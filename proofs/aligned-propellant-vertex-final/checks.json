@@ -1,0 +1,40 @@
+{
+  "status": "docked",
+  "wall_time_s": 100.84299999999348,
+  "sim_time_s": 374.6,
+  "playback_speed": 5,
+  "replan_every_steps": 500,
+  "max_speed_mps": 1.9199999999999988,
+  "max_acceleration_mps2": 0.10000000099997702,
+  "max_thrust_n": 49.105563232032516,
+  "final_range_m": 0.0192111538094359,
+  "provider_sources": [
+    "vertex",
+    "vertex",
+    "vertex",
+    "vertex"
+  ],
+  "learned_proposals": 4,
+  "near_port_speed_ok": true,
+  "simultaneous_translation_rotation_steps": 965,
+  "final_speed_mps": 0.004,
+  "final_capture_checks": {
+    "eligible": true,
+    "checks": {
+      "range": true,
+      "relative_speed": true,
+      "alignment": true,
+      "rotation_rate": true,
+      "stable_alignment": true,
+      "port_corridor": true
+    },
+    "shared_range_m": 0.02
+  },
+  "propellant_used_kg": 10.712556509662997,
+  "propellant_remaining_kg": 14.287443490337004,
+  "final_mass_kg": 489.28744349033803,
+  "detumbling_steps": 599,
+  "final_approach_gates_passed": true,
+  "min_range_before_alignment_m": 100.0,
+  "scope": "Single accelerated live demonstration at a 2 cm simulated gate; not hardware accuracy or a provider success rate."
+}

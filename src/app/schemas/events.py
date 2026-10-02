@@ -155,6 +155,11 @@ class TelemetryEvent(StreamEventBase):
     command_limited: bool = False
     planning_pending: bool = False
     guidance_mode: str = "active_plan"
+    approach_gate: dict = Field(default_factory=dict)
+    propellant_remaining_kg: float = Field(default=0, ge=0)
+    propellant_used_kg: float = Field(default=0, ge=0)
+    propellant_flow_kgps: float = Field(default=0, ge=0)
+    mass_kg: float = Field(default=500, gt=0)
 
 
 class HeartbeatEvent(StreamEventBase):

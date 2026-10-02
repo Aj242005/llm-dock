@@ -1,0 +1,105 @@
+{
+  "initial_separation_validation": "100 m default; 0.02\u20131000 m permitted",
+  "active_thruster_jets": 9,
+  "hybrid": {
+    "session": "f2108956f90a",
+    "learned_advice_enabled": true,
+    "final_range_m": [
+      0.019996575054083046,
+      8.552631180928079e-12,
+      0.0
+    ],
+    "summary": {
+      "session_id": "f2108956f90a464f9574f9796625f769",
+      "status": "docked",
+      "stop_reason": "docked",
+      "failure_reason": null,
+      "steps_completed": 342,
+      "sim_time_s": 68.4,
+      "phase": "docked",
+      "final_secondary": {
+        "position_m": [
+          0.019996575054083046,
+          8.552631180928079e-12,
+          0.0
+        ],
+        "velocity_mps": [
+          -0.004000000000000002,
+          -1.7108192100934032e-12,
+          0.0
+        ],
+        "orientation_quat": [
+          1.0,
+          3.152131112786033e-09,
+          -7.319114558077028e-09,
+          2.719324607221332e-09
+        ],
+        "angular_velocity_radps": [
+          4.357436710243698e-09,
+          1.7131917127375437e-10,
+          1.0020254489244258e-08
+        ],
+        "fuel_remaining_pct": 97.63111578988212,
+        "orbital_elements": {
+          "semi_major_axis_m": 6878000.0,
+          "eccentricity": 0.0,
+          "inclination_deg": 0.0,
+          "raan_deg": 0.0,
+          "arg_periapsis_deg": 0.0,
+          "true_anomaly_deg": 0.0,
+          "mean_motion_radps": null
+        },
+        "inertia_kg_m2": [
+          599.2893347369633,
+          898.9340021054475,
+          898.9340021054475
+        ],
+        "mass_kg": 499.4077789474707,
+        "propellant_capacity_kg": 25.0,
+        "name": "Secondary",
+        "capture_radius_m": 0.02,
+        "motion_limits": {
+          "min_speed_mps": 0.0,
+          "max_speed_mps": 2.0,
+          "max_horizontal_speed_mps": 2.0,
+          "max_vertical_speed_mps": 2.0
+        },
+        "inertial_position_m": null
+      },
+      "controller": "lqr",
+      "metrics": {
+        "delta_v_mps": 1.2613104938629383,
+        "ise": 975.6969686288312,
+        "max_commanded_thrust_n": 50.00000000000001,
+        "total_llm_calls": 2,
+        "llm_fallback_calls": 0,
+        "anomaly_events_count": 0
+      },
+      "events_emitted": 350,
+      "llm_enabled": true,
+      "error": null
+    }
+  },
+  "stop_restart": "passed",
+  "manual_capture": "passed",
+  "responsive_chart_text": "at least 10.5 screen pixels at 320 and 390px",
+  "viewports": [
+    {
+      "width": 320,
+      "content": 320
+    },
+    {
+      "width": 390,
+      "content": 390
+    },
+    {
+      "width": 768,
+      "content": 768
+    },
+    {
+      "width": 1440,
+      "content": 1440
+    }
+  ],
+  "javascript_errors": []
+}

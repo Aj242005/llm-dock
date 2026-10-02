@@ -156,6 +156,7 @@ class SatelliteState(BaseModel):
         description="Principal moments of inertia [Ix, Iy, Iz] in kg·m² (defaults used if unset)",
     )
     mass_kg: float = Field(default=500.0, gt=0.0)
+    propellant_capacity_kg: float = Field(default=25.0, gt=0.0)
     name: str = Field(default="Spacecraft", min_length=1, max_length=80)
     capture_radius_m: float = Field(default=0.02, gt=0.0, le=0.03)
     motion_limits: MotionLimits = Field(default_factory=MotionLimits)
@@ -243,7 +244,17 @@ class SimulationConfig(BaseModel):
     dock_velocity_tol_mps: float = Field(default=0.005, gt=0.0, le=0.01)
     dock_attitude_tol_deg: float = Field(default=1.0, gt=0.0, le=5.0)
     # Fuel: normalized mass-flow per second of thruster use.
-    fuel_consumption_rate_pct_per_s: float = Field(default=0.05, ge=0.0)
+    fuel_consumption_rate_pct_per_s: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Legacy load-proportional burn override; omit to use specific impulse",
+    )
+    specific_impulse_s: float = Field(default=220.0, gt=0.0, le=10000)
+    rcs_specific_impulse_s: float = Field(default=60.0, gt=0.0, le=10000)
+    rcs_lever_arm_m: float = Field(default=0.75, gt=0.0, le=20)
+    attitude_standoff_m: float = Field(default=5.0, ge=0.5, le=100)
+    port_corridor_radius_m: float = Field(default=0.05, gt=0.0, le=0.5)
+    alignment_stable_time_s: float = Field(default=1.0, ge=0.0, le=30)
     # Divergence guards: fail the run (FailureReason.DIVERGED) if the relative
     # range exceeds ``max_range_m`` or the body rate exceeds ``max_omega_radps``
     # (an unstable policy — e.g. a bad RL checkpoint — can fling the chaser or
@@ -328,6 +339,8 @@ class SimulateRequest(BaseModel):
                     f"(received {separation:.3f} m)"
                 )
         for satellite in [self.primary, self.secondary]:
+            if satellite.propellant_capacity_kg >= satellite.mass_kg:
+                raise ValueError("Propellant capacity must be smaller than spacecraft mass")
             speed = math.sqrt(sum(v * v for v in satellite.velocity_mps))
             horizontal = math.hypot(*satellite.velocity_mps[:2])
             limits = satellite.motion_limits

@@ -1,0 +1,10 @@
+{
+  "scope": "Live simulated docking demonstration; see README for configuration and limitations",
+  "files": {
+    "approach-and-fuel.png": "165a1643a386bf34e128aed8e8d0febc32a0554d07a1d763ca56a2dbda3b1c37",
+    "checks.json": "2809da358486bb3dd1844f1d674f1f4ed7f6c37d5c680f4883293cf646eb9047",
+    "README.md": "dd469390ad35143942c46ac8df62e03e8244df25b34c7786952b98b382ba2861",
+    "session.json": "bf0c8b5b6842da0dc101c8d6053305e1ac57e9d3512d6ccb88058dc727991fe5",
+    "telemetry.csv": "58b04d27dccf1905f5c4fa3c8f2433ca40639ba65ef3f813c561b794c774027c"
+  }
+}

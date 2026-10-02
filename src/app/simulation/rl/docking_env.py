@@ -56,6 +56,7 @@ from app.simulation.dynamics import (
     quat_conjugate,
     quat_multiply,
 )
+from app.simulation.propellant import apply_propellant
 from app.simulation.safety import capture_checks, enforce_command, limit_velocity
 
 # Actuator limits shared with the PID/LQR controllers and the runner.
@@ -123,7 +124,7 @@ class DockingEnv(gym.Env):
         diverged_penalty: float = 50.0,
         fuel_out_penalty: float = 10.0,
         shaping_scale: float = 1.0,
-        fuel_consumption_rate_pct_per_s: float = 0.05,
+        fuel_consumption_rate_pct_per_s: float | None = None,
         initial_range_m: tuple[float, float] = (20.0, 400.0),
         motion_limits: MotionLimits | None = None,
         seed: int | None = None,
@@ -148,7 +149,7 @@ class DockingEnv(gym.Env):
         self.diverged_penalty = float(diverged_penalty)
         self.fuel_out_penalty = float(fuel_out_penalty)
         self.shaping_scale = float(shaping_scale)
-        self.fuel_rate = float(fuel_consumption_rate_pct_per_s)
+        self.fuel_rate = fuel_consumption_rate_pct_per_s
         self.initial_range = tuple(initial_range_m)
         self.motion_limits = motion_limits
 
@@ -201,15 +202,18 @@ class DockingEnv(gym.Env):
         action = np.clip(np.asarray(action, dtype=float), -1.0, 1.0)
         accel = action[:3] * self.max_accel
         torque = action[3:] * self.max_torque
-        command = Command(force_n=accel * self.mass_kg, torque_nm=torque)
+        command = Command(force_n=accel * self._state.mass_kg, torque_nm=torque)
         if self.motion_limits is not None:
             command, _ = enforce_command(
                 self._state, command, self.dt, self.n, np.zeros(3), self.motion_limits
             )
 
+        fuel_state = self._state.deep_copy()
+        command, _, _ = apply_propellant(fuel_state, command, self.dt, legacy_rate=self.fuel_rate)
         self._state = propagate_chaser(self._state, self.dt, self.n, command)
-        if np.linalg.norm(command.force_n) > 1e-6:
-            self._state.fuel_pct = max(0.0, self._state.fuel_pct - self.fuel_rate * self.dt)
+        self._state.fuel_pct = fuel_state.fuel_pct
+        self._state.mass_kg = fuel_state.mass_kg
+        self._state.inertia = fuel_state.inertia
         self._step += 1
 
         # Re-issue the sub-goal on the same cadence the service uses, so the
@@ -326,7 +330,7 @@ class DockingEnv(gym.Env):
 
     def command_to_action(self, command: Command) -> np.ndarray:
         """Convert a controller Command (N, N·m) to the env's [-1,1] action."""
-        accel = np.asarray(command.force_n, dtype=float) / self.mass_kg
+        accel = np.asarray(command.force_n, dtype=float) / self._state.mass_kg
         torque = np.asarray(command.torque_nm, dtype=float)
         action = np.concatenate([accel / self.max_accel, torque / self.max_torque])
         return np.clip(action, -1.0, 1.0).astype(np.float32)

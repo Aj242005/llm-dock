@@ -110,7 +110,7 @@ class RlController(Controller):
 
         accel = a[:3] * MAX_ACCEL_MPS2
         torque = a[3:] * MAX_TORQUE_NM
-        return Command(force_n=accel * self.mass_kg, torque_nm=torque)
+        return Command(force_n=accel * state.mass_kg, torque_nm=torque)
 
     def reset(self, ctx: ControlContext) -> None:
         pass  # stateless policy: nothing to reset between sub-goals

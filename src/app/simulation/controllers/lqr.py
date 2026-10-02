@@ -28,6 +28,7 @@ from app.simulation.controllers.base import (
     Controller,
     approach_force,
     attitude_error,
+    attitude_torque,
 )
 from app.simulation.controllers.lqr_riccati import solve_continuous_are
 from app.simulation.dynamics import Command, RigidBodyState
@@ -145,7 +146,7 @@ class LqrController(Controller):
             -MAX_FORCE_N,
             MAX_FORCE_N,
         )
-        torque = np.clip(u[3:], -MAX_TORQUE_NM, MAX_TORQUE_NM)
+        torque = attitude_torque(state, subgoal)
         return Command(force_n=force, torque_nm=torque)
 
     def reset(self, ctx: ControlContext) -> None:

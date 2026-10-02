@@ -152,7 +152,8 @@ async def test_delayed_plan_uses_current_near_port_speed_envelope():
     assert decision.applied
     assert decision.plan_age_s > 0
     assert np.linalg.norm(decision.subgoal.target_velocity_mps) <= 0.019 + 1e-6
-    assert decision.subgoal.target_position_m == [0, 0, 0]
+    # A delayed response cannot bypass the stable-alignment interval.
+    assert decision.subgoal.target_position_m == [5, 0, 0]
 
 
 async def test_fault_brakes_before_provider_returns_and_invalidates_old_context():
@@ -209,7 +210,7 @@ async def test_last_accepted_maneuver_continues_during_the_next_provider_call():
     await wait_until(lambda: session.summary.steps_completed >= 6)
     telemetry = [e for e in session.event_log if e.type == "telemetry"]
     assert telemetry[-1].planning_pending
-    assert telemetry[-1].guidance_mode == "active_plan"
+    assert telemetry[-1].guidance_mode == "aligning_at_standoff"
     assert telemetry[-1].range_m < telemetry[0].range_m
     assert np.linalg.norm(telemetry[-1].command_force_n) > 0
     assert session.summary.metrics.total_llm_calls == 1
@@ -254,6 +255,8 @@ async def test_learned_lateral_advice_is_aligned_and_slowed_for_capture(monkeypa
     await SimulationRunner(session, request).run()
     assert session.summary.status == "docked"
     decision = next(e for e in session.event_log if e.type == "llm_decision")
-    assert decision.subgoal.target_position_m == [0, 0, 0]
-    assert decision.subgoal.target_velocity_mps == [-0.019, 0, 0]
+    assert decision.subgoal.target_position_m == [5, 0, 0]
+    assert any(e.guidance_mode == "final_port_approach" for e in session.event_log if e.type == "telemetry")
+    # Back out to stand-off while stability accumulates; then close axially.
+    assert decision.subgoal.target_velocity_mps == [0.019, 0, 0]
     assert decision.safety_notes

@@ -30,7 +30,7 @@ from app.simulation.controllers.base import (
     ControlContext,
     Controller,
     approach_force,
-    attitude_error,
+    attitude_torque,
 )
 from app.simulation.dynamics import (
     Command,
@@ -95,9 +95,7 @@ class PidController(Controller):
         # ---- attitude loop: drive the full attitude to the docking-port
         #      frame (identity quat), nulling body rates. The rotation vector
         #      via atan2 handles 180° errors exactly.
-        rot_vec, rate_error = attitude_error(state, subgoal)
-        torque = state.inertia * (-0.008 * rot_vec - 0.18 * rate_error)
-        torque = np.clip(torque, -MAX_TORQUE_NM, MAX_TORQUE_NM)
+        torque = attitude_torque(state, subgoal)
 
         return Command(force_n=force, torque_nm=torque)
 

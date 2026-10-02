@@ -1,0 +1,1120 @@
+"""Simulation runner: the loop that drives one docking session.
+
+The runner owns the per-session execution flow:
+
+  * converts the request's ``SatelliteState`` into the internal physics state,
+  * derives the mean motion ``n`` from the orbital elements,
+  * advances the anomaly manager (dropout / impulse / priority change),
+  * calls the reasoning layer every ``llm_cadence_steps`` for a new sub-goal,
+  * computes the low-level controller command and propagates the dynamics,
+  * accumulates evaluation metrics (Δv, ISE, peak thrust, LLM call counts),
+  * emits the SSE event stream and terminates on docked / failure conditions.
+
+All events are appended to one ordered log; each SSE client reads its own cursor.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from contextlib import suppress
+from typing import Any
+
+import numpy as np
+
+from app.config import Settings
+from app.llm.reasoning_agent import (
+    HeuristicAgent,
+    ReasoningAgent,
+    ReasoningAgentFactory,
+    ReasoningInput,
+    with_retry_heuristic_fallback,
+)
+from app.llm.rl_advisor import RlAdvisor
+from app.llm.tools import docking_tools
+from app.schemas.docking import (
+    DockingPhase,
+    FailureReason,
+    Metrics,
+    MotionLimits,
+    SatelliteState,
+    SessionSummary,
+    SimulateRequest,
+    StopReason,
+)
+from app.schemas.events import (
+    AnomalyEvent,
+    DockedEvent,
+    FailedEvent,
+    LlmDecisionEvent,
+    LlmSubgoal,
+    PlanningEvent,
+    PrimaryFrame,
+    RlAdvisorSuggestion,
+    TelemetryEvent,
+)
+from app.sessions.store import Session
+from app.simulation.anomalies import AnomalyManager
+from app.simulation.controllers import ControlContext, build_controller
+from app.simulation.controllers.base import attitude_torque
+from app.simulation.dynamics import (
+    DEFAULT_INERTIA,
+    Command,
+    RigidBodyState,
+    classify_phase,
+    mean_motion_radps,
+    propagate_chaser,
+    quat_rotate,
+)
+from app.simulation.propellant import apply_propellant
+from app.simulation.safety import capture_checks, enforce_command, limit_velocity
+
+logger = logging.getLogger("llm_docking.runner")
+
+# Reference attitude: the docking port frame (body +X aligned with port).
+
+# Static sub-goal used when the LLM layer is disabled: direct homing.
+_STATIC_SUBGOAL = LlmSubgoal(
+    target_position_m=[0.0, 0.0, 0.0],
+    target_velocity_mps=[0.0, 0.0, 0.0],
+    closing_speed_mps=20.0,
+    rationale="LLM disabled: direct homing to the docking port.",
+)
+
+
+class SimulationRunner:
+    """Runs one simulation session to completion and writes its summary."""
+
+    def __init__(
+        self,
+        session: Session,
+        request: SimulateRequest,
+        settings: Settings | None = None,
+        agent: ReasoningAgent | None = None,
+        heuristic: HeuristicAgent | None = None,
+    ) -> None:
+        self.session = session
+        self.request = request
+        self.settings = settings or _default_settings()
+        self.agent = agent or (
+            ReasoningAgentFactory.build(request.config.provider, model=request.config.model)
+            if request.config.llm_enabled
+            else HeuristicAgent()
+        )
+        self.heuristic = heuristic or ReasoningAgentFactory.heuristic()
+
+        self._metrics = Metrics()
+        self._last_phase: DockingPhase | None = None
+        self._last_source: str | None = None
+        self._last_truth: RigidBodyState | None = None
+        self._current_step = 0
+        self._current_time = 0.0
+        # Primary frame anchors every telemetry event (frontend camera).
+        self._primary_frame = PrimaryFrame(
+            position_m=request.primary.position_m, orientation_quat=request.primary.orientation_quat
+        )
+        self.session.request_data = request.model_dump(mode="json")
+        self.session.request_data["config"]["provider"] = (
+            request.config.provider or self.settings.mode
+        )
+        self.session.request_data["config"]["model"] = getattr(
+            self.agent, "model", request.config.model
+        )
+        self._command_limited = False
+        self._planning_task: asyncio.Task | None = None
+        self._guidance_mode = "coasting"
+        self._alignment_stable_s = 0.0
+        self._ports_stable = False
+        self._detumble_position = None
+        self._fuel_used_kg = 0.0
+        self._fuel_flow_kgps = 0.0
+        # Lazy RL advisor (hybrid mode: the LLM planner sees a suggestion from
+        # the trained policy). None = not requested or unavailable.
+        self._rl_advisor: RlAdvisor | None = None
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
+
+    async def run(self) -> None:
+        """Drive the simulation to a terminal event and finalize the summary."""
+        try:
+            self._build_initial_summary()
+
+            await self._run_loop()
+        except Exception as exc:  # noqa: BLE001 - degrade to a failed summary
+            logger.exception("simulation_crashed", extra={"session_id": self.session.session_id})
+            await self._fail(
+                step=self._current_step,
+                sim_time=self._current_time,
+                reason=FailureReason.UNRECOVERABLE_ANOMALY,
+                error=str(exc),
+            )
+        finally:
+            if self._planning_task is not None:
+                self._planning_task.cancel()
+                with suppress(asyncio.CancelledError, Exception):
+                    await self._planning_task
+            self.session.finished.set()
+
+    # ------------------------------------------------------------------
+    # Main loop
+    # ------------------------------------------------------------------
+
+    async def _run_loop(self) -> None:
+        cfg = self.request.config
+        dt = cfg.step_interval_s
+
+        orbital = self.request.primary.orbital_elements or self.request.secondary.orbital_elements
+        assert orbital is not None  # guaranteed by SimulateRequest validation
+        n = orbital.mean_motion_radps or mean_motion_radps(orbital.semi_major_axis_m)
+
+        truth = self._to_rigid_body(self.request.secondary)
+        primary = self.request.primary
+        truth.position -= np.asarray(primary.position_m)
+        truth.velocity -= np.asarray(primary.velocity_mps)
+        from app.simulation.dynamics import quat_conjugate, quat_multiply
+
+        truth.quat = quat_multiply(quat_conjugate(np.asarray(primary.orientation_quat)), truth.quat)
+        truth.omega -= np.asarray(primary.angular_velocity_radps)
+        rng = np.random.default_rng(cfg.seed)
+        controller = build_controller(cfg.controller, truth.mass_kg, truth.inertia, n)
+        safety_controller = build_controller("lqr", truth.mass_kg, truth.inertia, n)
+        safety_context = ControlContext()
+        ctx = ControlContext()
+        anomalies = AnomalyManager(cfg.anomalies, rng)
+
+        subgoal: LlmSubgoal | None = None
+        step = 0
+        sim_time = 0.0
+        next_plan_step = 0
+        self._current_step = step
+        self._current_time = sim_time
+
+        # Initial state snapshot before any control.
+        await self._emit_telemetry(truth, step, sim_time, None, self._last_source)
+
+        while True:
+            self._last_truth = truth.deep_copy()
+            self.session.capture = self._capture(truth)
+            if self.session.cancel_requested:
+                await self._fail(step, sim_time, FailureReason.CANCELLED)
+                return
+            divergence = self._divergence_error(truth)
+            if divergence:
+                await self._fail(step, sim_time, FailureReason.DIVERGED, divergence)
+                return
+            # ---- advance anomaly timelines (fires configured anomalies) ----
+            observed, new_details = anomalies.advance(step, truth)
+            for detail in new_details:
+                await self._emit(AnomalyEvent(anomaly=detail, step=step, sim_time_s=sim_time))
+                self._metrics.anomaly_events_count += 1
+
+            aborting = anomalies.priority_change_active(step) == "abort"
+            sensor_stale = any(s.observing_dropout for s in anomalies.states)
+            self._capture_blocked = aborting or sensor_stale
+            self.session.capture = self._capture(truth)
+            if (
+                not aborting
+                and not sensor_stale
+                and self.session.capture["eligible"]
+                and (cfg.auto_dock or self.session.dock_requested)
+            ):
+                await self._docked(truth, step, sim_time)
+                return
+
+            # Consume a completed provider response without ever waiting for it.
+            if self._planning_task is not None and self._planning_task.done():
+                completed = self._planning_task
+                self._planning_task = None
+                result = completed.result()
+                subgoal, applied = await self._accept_plan(
+                    result, observed, step, sim_time, anomalies
+                )
+                controller.reset(ctx)
+                if not applied:
+                    next_plan_step = step
+
+            if new_details:
+                next_plan_step = step
+
+            # Local rules are cheap and deterministic. Network providers run in
+            # one background task; overlapping requests are coalesced.
+            if cfg.llm_enabled and self._planning_task is None and step >= next_plan_step:
+                await self._emit(
+                    PlanningEvent(
+                        step=step,
+                        sim_time_s=sim_time,
+                        provider=cfg.provider or self.settings.mode,
+                        status="started",
+                    )
+                )
+                next_plan_step = step + cfg.llm_cadence_steps
+                if isinstance(self.agent, HeuristicAgent):
+                    result = await self._plan(observed, step, sim_time, anomalies, subgoal)
+                    subgoal, _ = await self._accept_plan(
+                        result, observed, step, sim_time, anomalies
+                    )
+                    controller.reset(ctx)
+                else:
+                    self._planning_task = asyncio.create_task(
+                        self._plan(observed.deep_copy(), step, sim_time, anomalies, subgoal)
+                    )
+                    # Give the task a turn to capture its input before advancing faults.
+                    await asyncio.sleep(0)
+            elif not cfg.llm_enabled and subgoal is None:
+                subgoal = _STATIC_SUBGOAL
+                self._last_source = None
+                controller.reset(ctx)
+
+            # ---- low-level control from the *observed* state ----
+            active_subgoal = subgoal
+            self._guidance_mode = "active_plan" if subgoal is not None else "coasting"
+            if aborting or sensor_stale:
+                # Fault response never waits for a network plan or trusts an old one.
+                active_subgoal = LlmSubgoal(
+                    target_position_m=observed.position.tolist(),
+                    target_velocity_mps=[0, 0, 0],
+                    closing_speed_mps=0,
+                    rationale="Local safety controller: brake during abort or sensor loss.",
+                    maneuver_mode="hold",
+                )
+                self._guidance_mode = "abort_braking" if aborting else "sensor_braking"
+            if (
+                active_subgoal is not None
+                and active_subgoal.maneuver_mode == "approach"
+                and not (aborting or sensor_stale)
+            ):
+                active_subgoal = self._continuous_approach(active_subgoal, observed)
+            rotation_rate = float(np.linalg.norm(truth.omega))
+            if rotation_rate > 0.1 and not (aborting or sensor_stale):
+                if self._detumble_position is None:
+                    self._detumble_position = truth.position.copy()
+                active_subgoal = LlmSubgoal(
+                    target_position_m=self._detumble_position.tolist(),
+                    target_velocity_mps=[0, 0, 0],
+                    closing_speed_mps=0,
+                    target_orientation_quat=[1, 0, 0, 0],
+                    maneuver_mode="hold",
+                    rationale="Detumble before closing toward the port.",
+                )
+                self._guidance_mode = "detumbling"
+            else:
+                if self._detumble_position is not None:
+                    # Request a fresh transfer plan when the tumble ends rather
+                    # than waiting out a full provider cadence in a safety hold.
+                    next_plan_step = step
+                self._detumble_position = None
+                if active_subgoal is not None and active_subgoal.maneuver_mode == "approach":
+                    self._guidance_mode = (
+                        "final_port_approach"
+                        if self._alignment_ready()
+                        and self._approach_gate(observed)["inside_port_corridor"]
+                        else "aligning_at_standoff"
+                    )
+            command = (
+                # The simulator's independent safety channel uses truth during
+                # injected sensor faults, and never delegates braking to PPO.
+                safety_controller.compute(
+                    truth,
+                    LlmSubgoal(
+                        target_position_m=truth.position.tolist(),
+                        target_velocity_mps=[0, 0, 0],
+                        closing_speed_mps=0,
+                        rationale="Independent safety braking",
+                        maneuver_mode="hold",
+                    ),
+                    dt,
+                    safety_context,
+                )
+                if aborting or sensor_stale
+                else controller.compute(observed, active_subgoal, dt, ctx)
+                if active_subgoal is not None
+                else Command()
+            )
+            if active_subgoal is not None:
+                # Attitude safety never depends on a PPO policy or network latency.
+                command.torque_nm = attitude_torque(truth, active_subgoal)
+            # Reserve enough distance to brake before the shared capture envelope.
+            # Apply this to actual motion, not just to the LLM's velocity proposal.
+            limits = self._motion_envelope(truth)
+            command, self._command_limited = enforce_command(
+                truth,
+                command,
+                dt,
+                n,
+                self.request.primary.velocity_mps,
+                limits,
+                cfg.max_thrust_n,
+                cfg.max_acceleration_mps2,
+                max_relative_speed_mps=self._relative_speed_cap(truth),
+            )
+            fuel_state = truth.deep_copy()
+            command, burned, self._fuel_flow_kgps = apply_propellant(
+                fuel_state,
+                command,
+                dt,
+                self.request.secondary.propellant_capacity_kg,
+                cfg.specific_impulse_s,
+                cfg.rcs_specific_impulse_s,
+                cfg.rcs_lever_arm_m,
+                cfg.fuel_consumption_rate_pct_per_s,
+            )
+            self._fuel_used_kg += burned
+
+            # ---- metrics on truth (physical state), pre-propagation ----
+            self._metrics.ise += float(np.dot(truth.position, truth.position)) * dt
+            self._metrics.delta_v_mps += float(np.linalg.norm(command.force_n)) / truth.mass_kg * dt
+            self._metrics.max_commanded_thrust_n = max(
+                self._metrics.max_commanded_thrust_n, float(np.linalg.norm(command.force_n))
+            )
+
+            # ---- propagate truth, burn fuel ----
+            previous_velocity = truth.velocity.copy()
+            truth = propagate_chaser(truth, dt, n, command)
+            truth.fuel_pct, truth.mass_kg, truth.inertia = (
+                fuel_state.fuel_pct,
+                fuel_state.mass_kg,
+                fuel_state.inertia,
+            )
+            if (
+                np.linalg.norm((truth.velocity - previous_velocity) / dt)
+                > cfg.max_acceleration_mps2 + 1e-6
+            ):
+                await self._fail(step, sim_time, FailureReason.LIMIT_EXCEEDED)
+                return
+
+            step += 1
+            sim_time = step * dt
+            self._current_step = step
+            self._current_time = sim_time
+
+            # The cooperative primary follows its configured constant angular rate.
+            from app.simulation.dynamics import quat_from_axis_angle, quat_multiply
+
+            primary_rate = np.asarray(self.request.primary.angular_velocity_radps)
+            rate = float(np.linalg.norm(primary_rate))
+            if rate > 1e-12:
+                rotation = quat_from_axis_angle(primary_rate / rate, rate * sim_time)
+                self._primary_frame.orientation_quat = quat_multiply(
+                    np.asarray(self.request.primary.orientation_quat), rotation
+                ).tolist()
+
+            self._last_truth = truth.deep_copy()
+            checks = self._capture(truth)["checks"]
+            if checks["alignment"] and checks["rotation_rate"]:
+                self._ports_stable = True
+                self._alignment_stable_s += dt
+            else:
+                self._ports_stable = False
+                self._alignment_stable_s = 0.0
+            divergence = self._divergence_error(truth)
+            if divergence:
+                await self._fail(step, sim_time, FailureReason.DIVERGED, divergence)
+                return
+            self._primary_frame.position_m = (
+                np.asarray(self.request.primary.position_m)
+                + np.asarray(self.request.primary.velocity_mps) * sim_time
+            ).tolist()
+            self.session.capture = self._capture(truth)
+            absolute_velocity = truth.velocity + np.asarray(self.request.primary.velocity_mps)
+            if not np.allclose(
+                absolute_velocity,
+                limit_velocity(absolute_velocity, self.request.secondary.motion_limits),
+                atol=1e-6,
+            ):
+                await self._fail(step, sim_time, FailureReason.LIMIT_EXCEEDED)
+                return
+            await self._emit_telemetry(truth, step, sim_time, command, self._last_source)
+            # ---- terminal conditions ----
+            if (
+                not aborting
+                and not sensor_stale
+                and self._is_docked(truth)
+                and (cfg.auto_dock or self.session.dock_requested)
+            ):
+                await self._docked(truth, step, sim_time)
+                return
+            if truth.fuel_pct <= 0.0:
+                await self._fail(step, sim_time, FailureReason.FUEL_EXHAUSTED)
+                return
+            if cfg.max_time_s is not None and sim_time >= cfg.max_time_s:
+                await self._fail(step, sim_time, FailureReason.MAX_TIME_EXCEEDED)
+                return
+            if step >= cfg.max_steps:
+                await self._fail(step, sim_time, FailureReason.MAX_STEPS_EXCEEDED)
+                return
+
+            delay = (
+                dt / cfg.playback_speed if cfg.playback_speed is not None else cfg.stream_pacing_s
+            )
+            # Interruptible pacing keeps Stop responsive even at 1× playback.
+            until = asyncio.get_running_loop().time() + delay
+            while not self.session.cancel_requested and asyncio.get_running_loop().time() < until:
+                await asyncio.sleep(min(0.1, until - asyncio.get_running_loop().time()))
+            # Unpaced experiments must also let provider tasks and Stop make progress.
+            await asyncio.sleep(0)
+
+    # ------------------------------------------------------------------
+    # Planning
+    # ------------------------------------------------------------------
+
+    async def _accept_plan(self, result, observed, step, sim_time, anomalies):
+        """Recheck a returned snapshot against the current state before applying it."""
+        subgoal, source, rl_sugg, snapshot, tools, notes = result
+        cfg = self.request.config
+        current_details = [
+            d for d in (st.current_detail for st in anomalies.states) if d is not None
+        ]
+        current = snapshot.model_copy(
+            update={
+                "step": step,
+                "sim_time_s": sim_time,
+                "phase": classify_phase(float(np.linalg.norm(observed.position))),
+                "range_m": float(np.linalg.norm(observed.position)),
+                "position_m": observed.position.tolist(),
+                "velocity_mps": observed.velocity.tolist(),
+                "orientation_quat": observed.quat.tolist(),
+                "angular_velocity_radps": observed.omega.tolist(),
+                "fuel_remaining_pct": observed.fuel_pct,
+                "mass_kg": observed.mass_kg,
+                "approach_speed_limit_mps": self._relative_speed_cap(observed),
+                "approach_gate": self._approach_gate(observed),
+                "anomaly_context": current_details,
+                "priority_change": anomalies.priority_change_active(step),
+                "capture": self._capture(observed),
+            }
+        )
+        age = sim_time - snapshot.sim_time_s
+        max_age = cfg.step_interval_s * cfg.llm_cadence_steps + cfg.planner_reserve_s
+        fault_changed = (
+            snapshot.priority_change != current.priority_change
+            or snapshot.anomaly_context != current_details
+        )
+        applied = age <= max_age and not fault_changed
+        recovery_subgoal = None
+        if applied:
+            subgoal, source, fresh_notes = self._bound_plan(subgoal, source, current, observed)
+            notes = list(dict.fromkeys(notes + fresh_notes))
+        else:
+            notes.append(
+                "Response discarded: snapshot expired or fault context changed. Fresh deterministic guidance applied."
+            )
+            # A slow provider must not leave the mission repeatedly braking at
+            # every expired response. Use current readings and the same bounds.
+            recovery_input = current.model_copy(
+                update={
+                    "rl_advisor": None,
+                    "rl_advisor_status": "unavailable",
+                    "rl_advisor_reason": "The old policy proposal belongs to the discarded snapshot",
+                }
+            )
+            recovery_subgoal, _, recovery_notes = self._bound_plan(
+                self.heuristic.plan(recovery_input), "heuristic_fallback", recovery_input, observed
+            )
+            notes.extend(recovery_notes)
+        self._metrics.total_llm_calls += 1
+        if source == "heuristic_fallback":
+            self._metrics.llm_fallback_calls += 1
+        self._last_source = source if applied else "heuristic_fallback"
+        await self._emit(
+            PlanningEvent(step=step, sim_time_s=sim_time, provider=source, status="completed")
+        )
+        await self._emit(
+            LlmDecisionEvent(
+                step=step,
+                sim_time_s=sim_time,
+                phase=self._phase_of(observed),
+                subgoal=subgoal,
+                source=source,
+                anomaly_context=current_details,
+                priority_change=current.priority_change,
+                metrics_so_far=self._metrics.model_copy(deep=True),
+                rl_advisor=rl_sugg,
+                rl_advisor_status=snapshot.rl_advisor_status,
+                rl_advisor_reason=snapshot.rl_advisor_reason,
+                tool_results=tools,
+                safety_notes=notes,
+                snapshot_step=snapshot.step,
+                snapshot_sim_time_s=snapshot.sim_time_s,
+                plan_age_s=age,
+                applied=applied,
+                recovery_subgoal=recovery_subgoal,
+            )
+        )
+        if not applied:
+            subgoal = recovery_subgoal
+        return subgoal, applied
+
+    def _continuous_approach(self, subgoal, state):
+        """Continue a nominal plan toward the port while translation and rotation run together."""
+        limits = self.request.secondary.motion_limits
+        speed = min(
+            self._relative_speed_cap(state),
+            limits.max_speed_mps,
+            subgoal.closing_speed_mps,
+        )
+        axis = self._port_axis()
+        axial = float(np.dot(state.position, axis))
+        lateral = np.linalg.norm(state.position - axis * axial)
+        in_corridor = axial > 0 and lateral <= self.request.config.port_corridor_radius_m
+        target = np.zeros(3)
+        if not self._alignment_ready() or not in_corridor:
+            target = axis * self.request.config.attitude_standoff_m
+        offset = target - state.position
+        velocity = offset / max(float(np.linalg.norm(offset)), 1e-9) * speed
+        velocity = limit_velocity(
+            velocity + np.asarray(self.request.primary.velocity_mps), limits
+        ) - np.asarray(self.request.primary.velocity_mps)
+        return subgoal.model_copy(
+            update={
+                "target_position_m": target.tolist(),
+                "target_velocity_mps": velocity.tolist(),
+                "closing_speed_mps": float(np.linalg.norm(velocity)),
+                "target_orientation_quat": [1, 0, 0, 0],
+                "target_angular_velocity_radps": [0, 0, 0],
+            }
+        )
+
+    def _port_axis(self):
+        return quat_rotate(
+            np.asarray(self._primary_frame.orientation_quat), np.array([1.0, 0.0, 0.0])
+        )
+
+    def _alignment_ready(self):
+        return (
+            self._ports_stable
+            and self._alignment_stable_s >= self.request.config.alignment_stable_time_s
+        )
+
+    def _motion_envelope(self, state: RigidBodyState) -> MotionLimits:
+        """Bound applied velocity by speed limits and conservative stopping distance."""
+        limits = self.request.secondary.motion_limits.model_copy()
+        cap = self._relative_speed_cap(state)
+        absolute_cap = cap + float(np.linalg.norm(self.request.primary.velocity_mps))
+        limits.max_speed_mps = min(limits.max_speed_mps, absolute_cap)
+        return limits
+
+    def _divergence_error(self, state):
+        """Name the condition that makes this run leave its physical envelope."""
+        values = np.concatenate([state.position, state.velocity, state.quat, state.omega])
+        if not np.isfinite(values).all():
+            return "Simulation stopped: position, velocity or attitude became non-finite. Reset the starting state."
+        distance = float(np.linalg.norm(state.position))
+        maximum = self.request.config.max_range_m or 1000
+        if distance > maximum:
+            return f"Simulation stopped: port separation {distance:.3f} m exceeded the {maximum:g} m range limit. Reduce the starting range or outward velocity."
+        rate = float(np.linalg.norm(state.omega))
+        limit = self.request.config.max_omega_radps
+        if rate > limit:
+            return f"Simulation stopped: relative rotation rate {rate:.3f} rad/s exceeded the {limit:g} rad/s tumble limit. Reduce the rotation-rate components; 1 rad/s is approximately 57.3 deg/s."
+        return None
+
+    def _relative_speed_cap(self, state: RigidBodyState) -> float:
+        """Stopping distance applies to port-relative speed, even for a moving target."""
+        cfg = self.request.config
+        distance = float(np.linalg.norm(state.position))
+        orbital = self.request.primary.orbital_elements or self.request.secondary.orbital_elements
+        n = orbital.mean_motion_radps or mean_motion_radps(orbital.semi_major_axis_m)
+        drift = (
+            propagate_chaser(state, cfg.step_interval_s, n).velocity - state.velocity
+        ) / cfg.step_interval_s
+        braking = max(
+            1e-6,
+            min(cfg.max_acceleration_mps2, cfg.max_thrust_n / state.mass_kg)
+            - float(np.linalg.norm(drift)),
+        )
+        capture = min(
+            cfg.dock_position_tol_m,
+            self.request.primary.capture_radius_m,
+            self.request.secondary.capture_radius_m,
+        )
+        remaining = max(0.0, distance - capture * 0.5)
+        if not self._alignment_ready():
+            remaining = max(0.0, distance - cfg.attitude_standoff_m)
+        # The local controller executes braking every tick, independently of LLM
+        # latency. Reserve integration time rather than an entire provider cadence.
+        reserve = max(cfg.step_interval_s * 2, 0.5)
+        cap = -braking * reserve + np.sqrt((braking * reserve) ** 2 + 2 * braking * remaining)
+        if not self._alignment_ready():
+            # Keep authority for lateral station-keeping while withholding closure.
+            cap = max(0.05, cap)
+        near_speed = cfg.near_port_speed_mps * 0.95
+        if distance > 5:
+            # Start braking before entering the near-port envelope. Enforcing
+            # a lower limit only after crossing 5 m creates an abrupt boundary.
+            near_cap = -braking * reserve + np.sqrt(
+                (braking * reserve) ** 2 + near_speed**2 + 2 * braking * (distance - 5)
+            )
+            cap = min(cap, near_cap)
+        else:
+            cap = min(cap, near_speed)
+        if distance <= max(0.1, capture * 4):
+            cap = min(cap, cfg.dock_velocity_tol_mps * 0.8)
+        return float(cap)
+
+    async def _plan(
+        self,
+        observed: RigidBodyState,
+        step: int,
+        sim_time: float,
+        anomalies: AnomalyManager,
+        current_subgoal: LlmSubgoal | None,
+    ) -> tuple:
+        range_m = float(np.linalg.norm(observed.position))
+        anomaly_details = [
+            d for d in (st.current_detail for st in anomalies.states) if d is not None
+        ]
+        priority_change = anomalies.priority_change_active(step)
+        # Hybrid mode: ask the trained RL policy for an advisory sub-goal.
+        # Model loading/inference must not block SSE, status requests or Stop.
+        rl_sugg = (
+            await asyncio.to_thread(
+                self._advisor_suggestion, observed, current_subgoal, step, sim_time
+            )
+            if self.request.config.rl_advisor_enabled
+            else None
+        )
+        inp = ReasoningInput(
+            step=step,
+            sim_time_s=sim_time,
+            phase=classify_phase(range_m),
+            range_m=range_m,
+            position_m=[float(v) for v in observed.position],
+            velocity_mps=[float(v) for v in observed.velocity],
+            orientation_quat=[float(v) for v in observed.quat],
+            angular_velocity_radps=[float(v) for v in observed.omega],
+            fuel_remaining_pct=observed.fuel_pct,
+            controller=self.request.config.controller.value,
+            anomaly_context=anomaly_details,
+            priority_change=priority_change,
+            rl_advisor=rl_sugg,
+            rl_advisor_status=(
+                "available"
+                if rl_sugg
+                else "unavailable"
+                if self.request.config.rl_advisor_enabled
+                else "disabled"
+            ),
+            rl_advisor_reason=(
+                self._rl_advisor.last_error
+                if self._rl_advisor and not rl_sugg
+                else "Learned advice was switched off for this session"
+                if not self.request.config.rl_advisor_enabled
+                else None
+            ),
+            capture=self._capture(observed),
+            primary_limits=self.request.primary.motion_limits.model_dump(),
+            secondary_limits=self.request.secondary.motion_limits.model_dump(),
+            max_thrust_n=self.request.config.max_thrust_n,
+            max_acceleration_mps2=self.request.config.max_acceleration_mps2,
+            approach_speed_limit_mps=min(
+                self._relative_speed_cap(observed),
+                self.request.secondary.motion_limits.max_speed_mps,
+            ),
+            capture_speed_mps=self.request.config.dock_velocity_tol_mps,
+            mass_kg=observed.mass_kg,
+            approach_gate=self._approach_gate(observed),
+            propellant={
+                "remaining_kg": self.request.secondary.propellant_capacity_kg
+                * observed.fuel_pct
+                / 100,
+                "used_kg": self._fuel_used_kg,
+                "specific_impulse_s": self.request.config.specific_impulse_s,
+                "rcs_specific_impulse_s": self.request.config.rcs_specific_impulse_s,
+                "rcs_lever_arm_m": self.request.config.rcs_lever_arm_m,
+            },
+            primary_velocity_mps=self.request.primary.velocity_mps,
+        )
+        tools = [{"name": t.name, "result": t.invoke({})} for t in docking_tools(inp)[:4]]
+        if isinstance(self.agent, HeuristicAgent):
+            subgoal, source = await self.agent.reason(inp)
+        else:
+            subgoal, source = await with_retry_heuristic_fallback(
+                self.agent,
+                inp,
+                self.heuristic,
+                max_retries=self.settings.llm_max_retries,
+                backoff_s=self.settings.llm_retry_backoff_s,
+            )
+            tools = self.agent.last_tools or tools
+        subgoal, source, notes = self._bound_plan(subgoal, source, inp, observed)
+        return subgoal, source, rl_sugg, inp, tools, notes
+
+    def _bound_plan(self, subgoal, source, inp, observed):
+        """Apply the same target and speed rules at request and response time."""
+        range_m = float(np.linalg.norm(observed.position))
+        anomaly_details = inp.anomaly_context
+        notes = []
+        target = np.asarray(subgoal.target_position_m)
+        standoff_target = self._port_axis() * self.request.config.attitude_standoff_m
+        is_standoff = np.allclose(target, standoff_target)
+        if not np.isfinite(target).all() or (
+            not is_standoff and np.linalg.norm(target) > max(range_m * 1.1, 1.25)
+        ):
+            subgoal = self.heuristic.plan(inp)
+            source = "heuristic_fallback"
+            notes.append("Rejected non-finite or diverging target.")
+            target = np.asarray(subgoal.target_position_m)
+        attitude = np.asarray(subgoal.target_orientation_quat, dtype=float)
+        if not np.isfinite(attitude).all() or abs(np.linalg.norm(attitude) - 1) > 1e-3:
+            subgoal.target_orientation_quat = [1, 0, 0, 0]
+            notes.append("Invalid attitude target replaced with port alignment.")
+        rate = np.asarray(subgoal.target_angular_velocity_radps, dtype=float)
+        rate_size = np.linalg.norm(rate)
+        if rate_size > 0.05:
+            rate *= 0.05 / rate_size
+            subgoal.target_angular_velocity_radps = rate.tolist()
+            notes.append("Angular target limited to 0.05 rad/s.")
+        if range_m <= 5:
+            subgoal.target_orientation_quat = [1, 0, 0, 0]
+            subgoal.target_angular_velocity_radps = [0, 0, 0]
+        if inp.priority_change == "abort" or any(
+            a.type.value == "sensor_dropout" and "restored" not in a.detail for a in anomaly_details
+        ):
+            subgoal.maneuver_mode = "hold"
+        limits = self._motion_envelope(observed)
+        relative_limits = MotionLimits(
+            max_speed_mps=min(
+                self._relative_speed_cap(observed),
+                limits.max_speed_mps,
+            ),
+            max_horizontal_speed_mps=limits.max_horizontal_speed_mps,
+            max_vertical_speed_mps=limits.max_vertical_speed_mps,
+        )
+        desired_velocity = np.asarray(subgoal.target_velocity_mps)
+        distance_to_goal = float(np.linalg.norm(target - observed.position))
+        if (
+            limits.min_speed_mps > 0
+            and range_m > 5.0
+            and inp.priority_change != "abort"
+            and not anomaly_details
+            and np.linalg.norm(desired_velocity) > 1e-9
+            and np.dot(desired_velocity, observed.position) < 0
+        ):
+            # Minimum is a transit preference, bounded by braking distance and phase limits.
+            transit_speed = min(
+                limits.min_speed_mps,
+                np.sqrt(
+                    2
+                    * min(
+                        self.request.config.max_acceleration_mps2,
+                        self.request.config.max_thrust_n / observed.mass_kg,
+                    )
+                    * distance_to_goal
+                ),
+                relative_limits.max_speed_mps,
+            )
+            if np.linalg.norm(desired_velocity) < transit_speed:
+                desired_velocity *= transit_speed / np.linalg.norm(desired_velocity)
+        velocity = limit_velocity(desired_velocity, relative_limits)
+        if not np.allclose(velocity, subgoal.target_velocity_mps):
+            notes.append("Target velocity reduced to the configured and phase envelope.")
+        subgoal.target_velocity_mps = velocity.tolist()
+        subgoal.closing_speed_mps = min(subgoal.closing_speed_mps, float(np.linalg.norm(velocity)))
+        if (
+            range_m <= 5
+            and range_m > 0
+            and self._alignment_ready()
+            and self._approach_gate(observed)["inside_port_corridor"]
+            and inp.priority_change != "abort"
+            and not anomaly_details
+            and np.dot(velocity, observed.position) < 0
+        ):
+            # Learned lateral advice must not create a near-port orbit. Finish
+            # along the measured port vector, below the capture speed tolerance.
+            speed = min(float(np.linalg.norm(velocity)), limits.max_speed_mps)
+            subgoal.target_position_m = [0.0, 0.0, 0.0]
+            subgoal.target_velocity_mps = (-observed.position / range_m * speed).tolist()
+            subgoal.closing_speed_mps = speed
+            notes.append(
+                "Final approach aligned with the measured port vector, with capture-speed margin."
+            )
+        if (
+            subgoal.maneuver_mode == "approach"
+            and inp.priority_change != "abort"
+            and not anomaly_details
+        ):
+            subgoal = self._continuous_approach(subgoal, observed)
+            notes.append(
+                (
+                    "Stable port alignment and corridor entry confirmed; final axial closure. "
+                    if np.linalg.norm(subgoal.target_position_m) < 1e-9
+                    else "Translation to the port-axis standoff while aligning; final axial closure waits for stable alignment. "
+                )
+                + f"Current braking envelope {subgoal.closing_speed_mps:.3f} m/s."
+            )
+        if not subgoal.alternatives:
+            subgoal.alternatives = [
+                "Faster approach rejected: braking margin decreases.",
+                "Immediate capture rejected until all capture checks pass.",
+            ]
+        if not subgoal.rl_assessment:
+            subgoal.rl_assessment = (
+                "Learned advice informed the approach; continuous guidance sets the bounded port-directed velocity."
+                if "RL advisor adopted" in subgoal.rationale
+                else "Learned advice was available; the planner used a bounded port-directed maneuver."
+                if inp.rl_advisor
+                else "No learned proposal was supplied for this decision."
+            )
+        return subgoal, source, notes
+
+    def _advisor_suggestion(
+        self,
+        observed: RigidBodyState,
+        current_subgoal: LlmSubgoal | None,
+        step: int = 0,
+        sim_time: float = 0,
+    ) -> RlAdvisorSuggestion | None:
+        cfg = self.request.config
+        if not cfg.rl_advisor_enabled:
+            return None
+        if self._rl_advisor is None:
+            self._rl_advisor = RlAdvisor(
+                mass_kg=observed.mass_kg,
+                inertia=observed.inertia,
+                lookahead_s=cfg.rl_advisor_lookahead_s,
+            )
+        baseline = self.heuristic.plan(
+            ReasoningInput(
+                step=step,
+                sim_time_s=sim_time,
+                phase=classify_phase(float(np.linalg.norm(observed.position))),
+                range_m=float(np.linalg.norm(observed.position)),
+                position_m=observed.position.tolist(),
+                velocity_mps=observed.velocity.tolist(),
+                orientation_quat=observed.quat.tolist(),
+                angular_velocity_radps=observed.omega.tolist(),
+                fuel_remaining_pct=observed.fuel_pct,
+                controller=cfg.controller.value,
+            )
+        )
+        suggestion = self._rl_advisor.suggest(observed, baseline)
+        return suggestion
+
+    # ------------------------------------------------------------------
+    # Terminal events + summary
+    # ------------------------------------------------------------------
+
+    async def _docked(self, truth: RigidBodyState, step: int, sim_time: float) -> None:
+        final = self._to_satellite(truth)
+        self._last_phase = DockingPhase.DOCKED
+        await self._emit(
+            DockedEvent(
+                step=step,
+                sim_time_s=sim_time,
+                final_secondary=final,
+                metrics=self._metrics.model_copy(deep=True),
+            )
+        )
+        summary = self.session.summary
+        assert summary is not None
+        summary.status = "docked"
+        summary.stop_reason = StopReason.DOCKED
+        summary.failure_reason = None
+        summary.steps_completed = step
+        summary.sim_time_s = sim_time
+        summary.phase = self._last_phase or DockingPhase.DOCKED
+        summary.final_secondary = final
+        summary.metrics = self._metrics.model_copy(deep=True)
+        summary.error = None
+
+    async def _fail(
+        self,
+        step: int,
+        sim_time: float,
+        reason: FailureReason,
+        error: str | None = None,
+    ) -> None:
+        if error is None:
+            error = {
+                FailureReason.CANCELLED: "Session stopped by the user.",
+                FailureReason.FUEL_EXHAUSTED: "Simulation stopped: fuel is exhausted. Increase starting fuel or reduce manoeuvring demand.",
+                FailureReason.MAX_TIME_EXCEEDED: "Simulation stopped: the simulation-time budget was reached. Increase the time budget for this approach.",
+                FailureReason.MAX_STEPS_EXCEEDED: "Simulation stopped: the step budget was reached. Increase the step budget for this approach.",
+                FailureReason.LIMIT_EXCEEDED: "Simulation stopped: the motion envelope could not be maintained with the available thrust. Reduce starting velocity or adjust the actuator limits.",
+            }.get(reason)
+        final = self._to_satellite(self._last_truth) if self._last_truth is not None else None
+        await self._emit(
+            FailedEvent(
+                step=step,
+                sim_time_s=sim_time,
+                failure_reason=reason,
+                error=error,
+                final_secondary=final,
+                metrics=self._metrics.model_copy(deep=True),
+            )
+        )
+        summary = self.session.summary
+        assert summary is not None
+        summary.status = "failed"
+        summary.stop_reason = StopReason.FAILED
+        summary.failure_reason = reason
+        summary.steps_completed = step
+        summary.sim_time_s = sim_time
+        summary.phase = self._last_phase
+        summary.final_secondary = final
+        summary.metrics = self._metrics.model_copy(deep=True)
+        summary.error = error
+
+    def _build_initial_summary(self) -> None:
+        self.session.summary = SessionSummary(
+            session_id=self.session.session_id,
+            status="running",
+            controller=self.request.config.controller,
+            llm_enabled=self.request.config.llm_enabled,
+            metrics=self._metrics,
+        )
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    async def _emit_telemetry(
+        self,
+        state: RigidBodyState,
+        step: int,
+        sim_time: float,
+        command: Any,
+        llm_source: str | None,
+    ) -> None:
+        range_m = float(np.linalg.norm(state.position))
+        phase = self._phase_of(state)
+        self._last_phase = phase
+        self._last_truth = state.deep_copy()
+        await self._emit(
+            TelemetryEvent(
+                step=step,
+                sim_time_s=sim_time,
+                phase=phase,
+                position_m=[float(v) for v in state.position],
+                velocity_mps=[float(v) for v in state.velocity],
+                range_m=range_m,
+                closing_speed_mps=self._closing_speed(state),
+                fuel_pct=state.fuel_pct,
+                controller=self.request.config.controller,
+                llm_source=llm_source,
+                command_force_n=[float(v) for v in command.force_n]
+                if command is not None
+                else None,
+                command_torque_nm=[float(v) for v in command.torque_nm]
+                if command is not None
+                else None,
+                primary=self._primary_frame.model_copy(deep=True),
+                metrics_so_far=self._metrics.model_copy(deep=True),
+                orientation_quat=state.quat.tolist(),
+                angular_velocity_radps=state.omega.tolist(),
+                primary_velocity_mps=self.request.primary.velocity_mps,
+                secondary_velocity_mps=(
+                    state.velocity + np.asarray(self.request.primary.velocity_mps)
+                ).tolist(),
+                capture=self._capture(state),
+                command_limited=self._command_limited,
+                planning_pending=self._planning_task is not None,
+                guidance_mode=self._guidance_mode,
+                approach_gate=self._approach_gate(state),
+                propellant_remaining_kg=self.request.secondary.propellant_capacity_kg
+                * state.fuel_pct
+                / 100,
+                propellant_used_kg=self._fuel_used_kg,
+                propellant_flow_kgps=self._fuel_flow_kgps,
+                mass_kg=state.mass_kg,
+            )
+        )
+        summary = self.session.summary
+        if summary is not None:
+            summary.steps_completed = step
+            summary.sim_time_s = sim_time
+            summary.phase = phase
+
+    async def _emit(self, event: Any) -> None:
+        await self.session.append(event)
+
+    @staticmethod
+    def _closing_speed(state: RigidBodyState) -> float:
+        r = state.position
+        norm = float(np.linalg.norm(r))
+        if norm < 1e-9:
+            return 0.0
+        # Radial closing rate: negative radial velocity, clamped at zero.
+        return max(0.0, -float(np.dot(state.velocity, r) / norm))
+
+    def _capture(self, state):
+        cfg = self.request.config
+        result = capture_checks(
+            state,
+            cfg.dock_position_tol_m,
+            cfg.dock_velocity_tol_mps,
+            cfg.dock_attitude_tol_deg,
+            primary_radius=self.request.primary.capture_radius_m,
+            secondary_radius=self.request.secondary.capture_radius_m,
+        )
+        result["checks"]["stable_alignment"] = self._alignment_ready()
+        result["checks"]["port_corridor"] = self._approach_gate(state)["inside_port_corridor"]
+        result["eligible"] = all(result["checks"].values())
+        if getattr(self, "_capture_blocked", False):
+            result["eligible"] = False
+            result["blocked_reason"] = "Mission aborted or sensor readings unavailable"
+        return result
+
+    def _approach_gate(self, state):
+        axis = self._port_axis()
+        axial = float(np.dot(state.position, axis))
+        lateral = float(np.linalg.norm(state.position - axis * axial))
+        return {
+            "alignment_ready": self._alignment_ready(),
+            "stable_time_s": self._alignment_stable_s,
+            "required_stable_time_s": self.request.config.alignment_stable_time_s,
+            "standoff_m": self.request.config.attitude_standoff_m,
+            "detumble_rate_threshold_radps": 0.1,
+            "port_axis": axis.tolist(),
+            "lateral_error_m": lateral,
+            "corridor_radius_m": self.request.config.port_corridor_radius_m,
+            "inside_port_corridor": axial > 0
+            and lateral <= self.request.config.port_corridor_radius_m,
+        }
+
+    def _is_docked(self, state):
+        return self._capture(state)["eligible"]
+
+    @staticmethod
+    def _phase_of(state: RigidBodyState) -> DockingPhase:
+        return DockingPhase(classify_phase(float(np.linalg.norm(state.position))))
+
+    @staticmethod
+    def _to_rigid_body(s: SatelliteState) -> RigidBodyState:
+        inertia = (
+            np.asarray(s.inertia_kg_m2, dtype=float)
+            if s.inertia_kg_m2 is not None
+            else DEFAULT_INERTIA.copy()
+        )
+        return RigidBodyState(
+            position=np.asarray(s.position_m, dtype=float),
+            velocity=np.asarray(s.velocity_mps, dtype=float),
+            quat=np.asarray(s.orientation_quat, dtype=float),
+            omega=np.asarray(s.angular_velocity_radps, dtype=float),
+            fuel_pct=s.fuel_remaining_pct,
+            mass_kg=s.mass_kg,
+            inertia=inertia,
+        )
+
+    def _to_satellite(self, s: RigidBodyState) -> SatelliteState:
+        # Summary coordinates remain relative; retain the configured spacecraft metadata.
+        return self.request.secondary.model_copy(
+            update={
+                "position_m": s.position.tolist(),
+                "velocity_mps": s.velocity.tolist(),
+                "orientation_quat": s.quat.tolist(),
+                "angular_velocity_radps": s.omega.tolist(),
+                "fuel_remaining_pct": s.fuel_pct,
+                "mass_kg": s.mass_kg,
+                "inertia_kg_m2": s.inertia.tolist(),
+            },
+            deep=True,
+        )
+
+
+def _default_settings() -> Settings:
+    from app.config import get_settings
+
+    return get_settings()

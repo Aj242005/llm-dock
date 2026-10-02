@@ -43,6 +43,8 @@ def docking_tools(snapshot):
             "current_approach_speed_limit_mps": snapshot.approach_speed_limit_mps,
             "capture_speed_mps": snapshot.capture_speed_mps,
             "target_angular_speed_limit_radps": snapshot.max_angular_speed_radps,
+            "approach_gate": snapshot.approach_gate,
+            "propellant": snapshot.propellant,
             "primary_limits": snapshot.primary_limits,
             "secondary_limits": snapshot.secondary_limits,
             "minimum_speed_rule": "Transit preference; braking and capture may use zero speed.",

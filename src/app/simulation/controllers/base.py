@@ -50,6 +50,20 @@ def attitude_error(state, subgoal):
     return rotation, state.omega - np.asarray(subgoal.target_angular_velocity_radps)
 
 
+def attitude_torque(state, subgoal):
+    """Damp a tumble first, then slew toward the port at a bounded body rate."""
+    rotation, _ = attitude_error(state, subgoal)
+    if np.linalg.norm(state.omega) > 0.1:
+        # Dissipate rotational energy before trying to chase a moving attitude.
+        desired_rate = np.zeros(3)
+    else:
+        desired_rate = -rotation * 0.15 + np.asarray(subgoal.target_angular_velocity_radps)
+        speed = np.linalg.norm(desired_rate)
+        if speed > 0.05:
+            desired_rate *= 0.05 / speed
+    return np.clip(state.inertia * (desired_rate - state.omega) * 0.5, -20, 20)
+
+
 class ControlContext:
     """Per-controller bookkeeping a controller may keep between calls.
 

@@ -56,12 +56,14 @@ class ReasoningInput(BaseModel):
     approach_speed_limit_mps: float = 2.0
     capture_speed_mps: float = 0.005
     max_angular_speed_radps: float = 0.05
+    approach_gate: dict = Field(default_factory=dict)
+    propellant: dict = Field(default_factory=dict)
 
 
 DOCKING_SYSTEM_PROMPT = """You plan coordinated six-degree-of-freedom spacecraft docking maneuvers.
 Objective: bring the secondary docking port to the primary docking port at [0,0,0],
-with aligned attitude, low relative velocity and low angular rate. Plan translation
-and rotation together; do not wait for translation to finish before aligning.
+with aligned attitude, low relative velocity and low angular rate. Detumble first
+when necessary; otherwise plan translation and rotation together.
 
 Coordinates and actuator contract:
 - Positions and velocities use the local orbital frame, in metres and m/s.
@@ -78,8 +80,22 @@ Coordinates and actuator contract:
   With a moving primary, add primary_velocity_mps before checking chaser limits.
 
 Approach policy:
-- Normally submit maneuver_mode='approach', target_position_m=[0,0,0] and inward
-  velocity. approach_speed_limit_mps already includes configured speed limits and
+- If measured angular speed exceeds 0.1 rad/s, submit maneuver_mode='hold',
+  target_position_m equal to the current position, target_velocity_mps=[0,0,0],
+  closing_speed_mps=0, target_orientation_quat=[1,0,0,0] and
+  target_angular_velocity_radps=[0,0,0]. Damping takes priority over closure.
+  Do not command inward translation during this phase.
+- Once the angular speed is at most 0.1 rad/s, use maneuver_mode='approach'. During low-rate
+  transit, align attitude while translating to the standoff point on port_axis.
+  Final closure is allowed only after alignment_ready and inside_port_corridor
+  are both true. The runner enforces this independently; do not reach the capture
+  distance and then try to stabilize. Keep the final target attitude aligned and
+  angular rate zero. Explain detumbling, standoff alignment or final axial closure.
+- Applied force and torque both consume propellant, computed from specific
+  impulse and RCS lever arm. Use actual remaining kilograms when discussing fuel.
+- Normally submit maneuver_mode='approach'. Target the port-axis standoff until
+  both approach gates pass, then target_position_m=[0,0,0] with inward velocity.
+  approach_speed_limit_mps already includes configured speed limits and
   stopping distance. Use this budget; do not impose an arbitrary 0.1 m/s mission cap.
 - Intermediate guidance must not become a mandatory stop. Local control rechecks
   range, updates velocity and brakes near the port between provider responses.

@@ -56,6 +56,7 @@ from app.schemas.events import (
 from app.sessions.store import Session
 from app.simulation.anomalies import AnomalyManager
 from app.simulation.controllers import ControlContext, build_controller
+from app.simulation.controllers.base import attitude_torque
 from app.simulation.dynamics import (
     DEFAULT_INERTIA,
     Command,
@@ -63,7 +64,9 @@ from app.simulation.dynamics import (
     classify_phase,
     mean_motion_radps,
     propagate_chaser,
+    quat_rotate,
 )
+from app.simulation.propellant import apply_propellant
 from app.simulation.safety import capture_checks, enforce_command, limit_velocity
 
 logger = logging.getLogger("llm_docking.runner")
@@ -74,7 +77,7 @@ logger = logging.getLogger("llm_docking.runner")
 _STATIC_SUBGOAL = LlmSubgoal(
     target_position_m=[0.0, 0.0, 0.0],
     target_velocity_mps=[0.0, 0.0, 0.0],
-    closing_speed_mps=0.0,
+    closing_speed_mps=20.0,
     rationale="LLM disabled: direct homing to the docking port.",
 )
 
@@ -120,6 +123,11 @@ class SimulationRunner:
         self._command_limited = False
         self._planning_task: asyncio.Task | None = None
         self._guidance_mode = "coasting"
+        self._alignment_stable_s = 0.0
+        self._ports_stable = False
+        self._detumble_position = None
+        self._fuel_used_kg = 0.0
+        self._fuel_flow_kgps = 0.0
         # Lazy RL advisor (hybrid mode: the LLM planner sees a suggestion from
         # the trained policy). None = not requested or unavailable.
         self._rl_advisor: RlAdvisor | None = None
@@ -278,6 +286,32 @@ class SimulationRunner:
                 and not (aborting or sensor_stale)
             ):
                 active_subgoal = self._continuous_approach(active_subgoal, observed)
+            rotation_rate = float(np.linalg.norm(truth.omega))
+            if rotation_rate > 0.1 and not (aborting or sensor_stale):
+                if self._detumble_position is None:
+                    self._detumble_position = truth.position.copy()
+                active_subgoal = LlmSubgoal(
+                    target_position_m=self._detumble_position.tolist(),
+                    target_velocity_mps=[0, 0, 0],
+                    closing_speed_mps=0,
+                    target_orientation_quat=[1, 0, 0, 0],
+                    maneuver_mode="hold",
+                    rationale="Detumble before closing toward the port.",
+                )
+                self._guidance_mode = "detumbling"
+            else:
+                if self._detumble_position is not None:
+                    # Request a fresh transfer plan when the tumble ends rather
+                    # than waiting out a full provider cadence in a safety hold.
+                    next_plan_step = step
+                self._detumble_position = None
+                if active_subgoal is not None and active_subgoal.maneuver_mode == "approach":
+                    self._guidance_mode = (
+                        "final_port_approach"
+                        if self._alignment_ready()
+                        and self._approach_gate(observed)["inside_port_corridor"]
+                        else "aligning_at_standoff"
+                    )
             command = (
                 # The simulator's independent safety channel uses truth during
                 # injected sensor faults, and never delegates braking to PPO.
@@ -298,6 +332,9 @@ class SimulationRunner:
                 if active_subgoal is not None
                 else Command()
             )
+            if active_subgoal is not None:
+                # Attitude safety never depends on a PPO policy or network latency.
+                command.torque_nm = attitude_torque(truth, active_subgoal)
             # Reserve enough distance to brake before the shared capture envelope.
             # Apply this to actual motion, not just to the LLM's velocity proposal.
             limits = self._motion_envelope(truth)
@@ -312,6 +349,18 @@ class SimulationRunner:
                 cfg.max_acceleration_mps2,
                 max_relative_speed_mps=self._relative_speed_cap(truth),
             )
+            fuel_state = truth.deep_copy()
+            command, burned, self._fuel_flow_kgps = apply_propellant(
+                fuel_state,
+                command,
+                dt,
+                self.request.secondary.propellant_capacity_kg,
+                cfg.specific_impulse_s,
+                cfg.rcs_specific_impulse_s,
+                cfg.rcs_lever_arm_m,
+                cfg.fuel_consumption_rate_pct_per_s,
+            )
+            self._fuel_used_kg += burned
 
             # ---- metrics on truth (physical state), pre-propagation ----
             self._metrics.ise += float(np.dot(truth.position, truth.position)) * dt
@@ -323,14 +372,17 @@ class SimulationRunner:
             # ---- propagate truth, burn fuel ----
             previous_velocity = truth.velocity.copy()
             truth = propagate_chaser(truth, dt, n, command)
+            truth.fuel_pct, truth.mass_kg, truth.inertia = (
+                fuel_state.fuel_pct,
+                fuel_state.mass_kg,
+                fuel_state.inertia,
+            )
             if (
                 np.linalg.norm((truth.velocity - previous_velocity) / dt)
                 > cfg.max_acceleration_mps2 + 1e-6
             ):
                 await self._fail(step, sim_time, FailureReason.LIMIT_EXCEEDED)
                 return
-            if np.linalg.norm(command.force_n) > 1e-6:
-                truth.fuel_pct = max(0.0, truth.fuel_pct - cfg.fuel_consumption_rate_pct_per_s * dt)
 
             step += 1
             sim_time = step * dt
@@ -349,6 +401,13 @@ class SimulationRunner:
                 ).tolist()
 
             self._last_truth = truth.deep_copy()
+            checks = self._capture(truth)["checks"]
+            if checks["alignment"] and checks["rotation_rate"]:
+                self._ports_stable = True
+                self._alignment_stable_s += dt
+            else:
+                self._ports_stable = False
+                self._alignment_stable_s = 0.0
             divergence = self._divergence_error(truth)
             if divergence:
                 await self._fail(step, sim_time, FailureReason.DIVERGED, divergence)
@@ -418,6 +477,9 @@ class SimulationRunner:
                 "orientation_quat": observed.quat.tolist(),
                 "angular_velocity_radps": observed.omega.tolist(),
                 "fuel_remaining_pct": observed.fuel_pct,
+                "mass_kg": observed.mass_kg,
+                "approach_speed_limit_mps": self._relative_speed_cap(observed),
+                "approach_gate": self._approach_gate(observed),
                 "anomaly_context": current_details,
                 "priority_change": anomalies.priority_change_active(step),
                 "capture": self._capture(observed),
@@ -486,23 +548,43 @@ class SimulationRunner:
 
     def _continuous_approach(self, subgoal, state):
         """Continue a nominal plan toward the port while translation and rotation run together."""
-        distance = float(np.linalg.norm(state.position))
         limits = self.request.secondary.motion_limits
         speed = min(
             self._relative_speed_cap(state),
             limits.max_speed_mps,
             subgoal.closing_speed_mps,
         )
-        velocity = -state.position / max(distance, 1e-9) * speed
+        axis = self._port_axis()
+        axial = float(np.dot(state.position, axis))
+        lateral = np.linalg.norm(state.position - axis * axial)
+        in_corridor = axial > 0 and lateral <= self.request.config.port_corridor_radius_m
+        target = np.zeros(3)
+        if not self._alignment_ready() or not in_corridor:
+            target = axis * self.request.config.attitude_standoff_m
+        offset = target - state.position
+        velocity = offset / max(float(np.linalg.norm(offset)), 1e-9) * speed
         velocity = limit_velocity(
             velocity + np.asarray(self.request.primary.velocity_mps), limits
         ) - np.asarray(self.request.primary.velocity_mps)
         return subgoal.model_copy(
             update={
-                "target_position_m": [0.0, 0.0, 0.0],
+                "target_position_m": target.tolist(),
                 "target_velocity_mps": velocity.tolist(),
                 "closing_speed_mps": float(np.linalg.norm(velocity)),
+                "target_orientation_quat": [1, 0, 0, 0],
+                "target_angular_velocity_radps": [0, 0, 0],
             }
+        )
+
+    def _port_axis(self):
+        return quat_rotate(
+            np.asarray(self._primary_frame.orientation_quat), np.array([1.0, 0.0, 0.0])
+        )
+
+    def _alignment_ready(self):
+        return (
+            self._ports_stable
+            and self._alignment_stable_s >= self.request.config.alignment_stable_time_s
         )
 
     def _motion_envelope(self, state: RigidBodyState) -> MotionLimits:
@@ -548,10 +630,15 @@ class SimulationRunner:
             self.request.secondary.capture_radius_m,
         )
         remaining = max(0.0, distance - capture * 0.5)
+        if not self._alignment_ready():
+            remaining = max(0.0, distance - cfg.attitude_standoff_m)
         # The local controller executes braking every tick, independently of LLM
         # latency. Reserve integration time rather than an entire provider cadence.
         reserve = max(cfg.step_interval_s * 2, 0.5)
         cap = -braking * reserve + np.sqrt((braking * reserve) ** 2 + 2 * braking * remaining)
+        if not self._alignment_ready():
+            # Keep authority for lateral station-keeping while withholding closure.
+            cap = max(0.05, cap)
         near_speed = cfg.near_port_speed_mps * 0.95
         if distance > 5:
             # Start braking before entering the near-port envelope. Enforcing
@@ -627,6 +714,16 @@ class SimulationRunner:
             ),
             capture_speed_mps=self.request.config.dock_velocity_tol_mps,
             mass_kg=observed.mass_kg,
+            approach_gate=self._approach_gate(observed),
+            propellant={
+                "remaining_kg": self.request.secondary.propellant_capacity_kg
+                * observed.fuel_pct
+                / 100,
+                "used_kg": self._fuel_used_kg,
+                "specific_impulse_s": self.request.config.specific_impulse_s,
+                "rcs_specific_impulse_s": self.request.config.rcs_specific_impulse_s,
+                "rcs_lever_arm_m": self.request.config.rcs_lever_arm_m,
+            },
             primary_velocity_mps=self.request.primary.velocity_mps,
         )
         tools = [{"name": t.name, "result": t.invoke({})} for t in docking_tools(inp)[:4]]
@@ -650,7 +747,11 @@ class SimulationRunner:
         anomaly_details = inp.anomaly_context
         notes = []
         target = np.asarray(subgoal.target_position_m)
-        if not np.isfinite(target).all() or np.linalg.norm(target) > max(range_m * 1.1, 1.25):
+        standoff_target = self._port_axis() * self.request.config.attitude_standoff_m
+        is_standoff = np.allclose(target, standoff_target)
+        if not np.isfinite(target).all() or (
+            not is_standoff and np.linalg.norm(target) > max(range_m * 1.1, 1.25)
+        ):
             subgoal = self.heuristic.plan(inp)
             source = "heuristic_fallback"
             notes.append("Rejected non-finite or diverging target.")
@@ -714,6 +815,8 @@ class SimulationRunner:
         if (
             range_m <= 5
             and range_m > 0
+            and self._alignment_ready()
+            and self._approach_gate(observed)["inside_port_corridor"]
             and inp.priority_change != "abort"
             and not anomaly_details
             and np.dot(velocity, observed.position) < 0
@@ -734,8 +837,12 @@ class SimulationRunner:
         ):
             subgoal = self._continuous_approach(subgoal, observed)
             notes.append(
-                "Continuous port-directed translation and attitude alignment; "
-                f"current braking envelope {subgoal.closing_speed_mps:.3f} m/s."
+                (
+                    "Stable port alignment and corridor entry confirmed; final axial closure. "
+                    if np.linalg.norm(subgoal.target_position_m) < 1e-9
+                    else "Translation to the port-axis standoff while aligning; final axial closure waits for stable alignment. "
+                )
+                + f"Current braking envelope {subgoal.closing_speed_mps:.3f} m/s."
             )
         if not subgoal.alternatives:
             subgoal.alternatives = [
@@ -905,6 +1012,13 @@ class SimulationRunner:
                 command_limited=self._command_limited,
                 planning_pending=self._planning_task is not None,
                 guidance_mode=self._guidance_mode,
+                approach_gate=self._approach_gate(state),
+                propellant_remaining_kg=self.request.secondary.propellant_capacity_kg
+                * state.fuel_pct
+                / 100,
+                propellant_used_kg=self._fuel_used_kg,
+                propellant_flow_kgps=self._fuel_flow_kgps,
+                mass_kg=state.mass_kg,
             )
         )
         summary = self.session.summary
@@ -935,10 +1049,30 @@ class SimulationRunner:
             primary_radius=self.request.primary.capture_radius_m,
             secondary_radius=self.request.secondary.capture_radius_m,
         )
+        result["checks"]["stable_alignment"] = self._alignment_ready()
+        result["checks"]["port_corridor"] = self._approach_gate(state)["inside_port_corridor"]
+        result["eligible"] = all(result["checks"].values())
         if getattr(self, "_capture_blocked", False):
             result["eligible"] = False
             result["blocked_reason"] = "Mission aborted or sensor readings unavailable"
         return result
+
+    def _approach_gate(self, state):
+        axis = self._port_axis()
+        axial = float(np.dot(state.position, axis))
+        lateral = float(np.linalg.norm(state.position - axis * axial))
+        return {
+            "alignment_ready": self._alignment_ready(),
+            "stable_time_s": self._alignment_stable_s,
+            "required_stable_time_s": self.request.config.alignment_stable_time_s,
+            "standoff_m": self.request.config.attitude_standoff_m,
+            "detumble_rate_threshold_radps": 0.1,
+            "port_axis": axis.tolist(),
+            "lateral_error_m": lateral,
+            "corridor_radius_m": self.request.config.port_corridor_radius_m,
+            "inside_port_corridor": axial > 0
+            and lateral <= self.request.config.port_corridor_radius_m,
+        }
 
     def _is_docked(self, state):
         return self._capture(state)["eligible"]

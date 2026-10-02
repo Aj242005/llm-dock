@@ -58,6 +58,8 @@ function fields(prefix, label, primary) {
   ${triple("omega", "Rotation rate", "rad/s", [0, 0, 0])}
   <p class="field-help">Radians per second: 0.01 rad/s ≈ 0.57 deg/s. Use 0 for an initially steady craft. The combined relative rate must stay within the tumble limit.</p>
   <div class="pair"><label>Mass <span>kg</span><input id="${prefix}-mass" type="number" value="500" min="1" max="100000" step="1" required></label><label>Fuel <span>%</span><input id="${prefix}-fuel" type="number" value="100" min="0" max="100" step="0.1" required></label></div>
+  <label>Propellant capacity <span>kg</span><input id="${prefix}-propellant" type="number" value="25" min="0.001" step="0.001" required></label>
+  <p class="field-help">Mass includes loaded propellant. Fuel percentage measures the fraction of this tank capacity remaining.</p>
   <div class="pair"><label>Min. transit speed <span>m/s</span><input id="${prefix}-min" type="number" value="0" min="0" max="20" step="0.01" required></label><label>Max. speed <span>m/s</span><input id="${prefix}-max" type="number" value="2" min="0.01" max="20" step="0.01" required></label></div>
   <div class="pair"><label>Max. horizontal <span>m/s</span><input id="${prefix}-horizontal" type="number" value="2" min="0.01" max="20" step="0.01" required></label><label>Max. vertical <span>m/s</span><input id="${prefix}-vertical" type="number" value="2" min="0.01" max="20" step="0.01" required></label></div>
   <label>Port capture radius <span>m</span><input id="${prefix}-radius" type="number" value="0.02" min="0.005" max="0.03" step="0.001" required></label>
@@ -97,6 +99,7 @@ function satellite(prefix, name) {
     angular_velocity_radps: vector(`${prefix}-omega`),
     mass_kg: number(`${prefix}-mass`),
     fuel_remaining_pct: number(`${prefix}-fuel`),
+    propellant_capacity_kg: number(`${prefix}-propellant`),
     capture_radius_m: number(`${prefix}-radius`),
     motion_limits: {
       min_speed_mps: number(`${prefix}-min`),
@@ -145,7 +148,12 @@ function payload() {
       max_range_m: 1000,
       max_omega_radps: number("tumble-limit"),
       playback_speed: number("playback-speed"),
-      fuel_consumption_rate_pct_per_s: 0.001,
+      specific_impulse_s: number("engine-isp"),
+      rcs_specific_impulse_s: number("rcs-isp"),
+      rcs_lever_arm_m: number("rcs-arm"),
+      attitude_standoff_m: number("standoff"),
+      port_corridor_radius_m: number("corridor"),
+      alignment_stable_time_s: number("stable-time"),
       controller: $("controller").value,
       provider: $("provider").value,
       model: $("model").value.trim() || null,
@@ -190,7 +198,11 @@ function preview() {
   $("range").innerHTML = `${norm(relative).toFixed(3)} <small>m</small>`;
   $("speed").innerHTML = `${norm(velocity).toFixed(3)} <small>m/s</small>`;
   $("fuel").innerHTML =
-    `${data.secondary.fuel_remaining_pct.toFixed(1)} <small>%</small>`;
+    `${data.secondary.fuel_remaining_pct.toFixed(2)} <small>%</small>`;
+  $("propellant-remaining").textContent = `${(data.secondary.propellant_capacity_kg * data.secondary.fuel_remaining_pct / 100).toFixed(3)} kg remaining`;
+  $("propellant-used").textContent = "0.000 kg used · 0.000 g/s";
+  $("guidance-stage").textContent = "Awaiting session";
+  $("approach-gate").textContent = `Final closure requires stable port alignment and entry into the docking axis corridor. Stand-off: ${data.config.attitude_standoff_m} m.`;
   $("primary-velocity").textContent = formatVector(data.primary.velocity_mps);
   $("secondary-velocity").textContent = formatVector(
     data.secondary.velocity_mps,
@@ -236,6 +248,8 @@ function captureView(capture = {}) {
     relative_speed: "Relative speed",
     alignment: "Port alignment",
     rotation_rate: "Rotation rate",
+    stable_alignment: "Stable alignment",
+    port_corridor: "Docking axis corridor",
   };
   $("capture-checks").innerHTML = Object.entries(labels)
     .map(
@@ -418,7 +432,18 @@ function telemetry(event) {
   $("range").innerHTML = `${event.range_m.toFixed(3)} <small>m</small>`;
   $("speed").innerHTML =
     `${norm(event.velocity_mps).toFixed(3)} <small>m/s</small>`;
-  $("fuel").innerHTML = `${event.fuel_pct.toFixed(1)} <small>%</small>`;
+  $("fuel").innerHTML = `${event.fuel_pct.toFixed(2)} <small>%</small>`;
+  $("propellant-remaining").textContent = `${(event.propellant_remaining_kg ?? 0).toFixed(3)} kg remaining`;
+  $("propellant-used").textContent = `${(event.propellant_used_kg ?? 0).toFixed(3)} kg used · ${((event.propellant_flow_kgps ?? 0) * 1000).toFixed(3)} g/s`;
+  const stages = {
+    detumbling: "Damping rotation · closing withheld",
+    aligning_at_standoff: "Aligning ports · XYZ transfer to stand-off",
+    final_port_approach: "Stable alignment · final axial approach",
+    coasting: "Awaiting plan · local safety active",
+  };
+  $("guidance-stage").textContent = stages[event.guidance_mode] || event.guidance_mode?.replaceAll("_", " ") || "Local guidance";
+  const gate = event.approach_gate;
+  if (gate) $("approach-gate").textContent = `${gate.alignment_ready && gate.inside_port_corridor ? "Final closure permitted" : "Final closure withheld"}. Stable alignment ${Math.min(gate.stable_time_s, gate.required_stable_time_s).toFixed(1)} / ${gate.required_stable_time_s.toFixed(1)} s; lateral port error ${(gate.lateral_error_m * 100).toFixed(2)} cm / ${(gate.corridor_radius_m * 100).toFixed(2)} cm corridor.`;
   $("time").innerHTML = `${event.sim_time_s.toFixed(1)} <small>s</small>`;
   $("phase").textContent = event.phase.replaceAll("_", " ");
   $("primary-velocity").textContent = formatVector(event.primary_velocity_mps);
@@ -437,6 +462,8 @@ function telemetry(event) {
   if (event.planning_pending) {
     const activity = event.guidance_mode === "coasting"
       ? "coasting under safety limits"
+      : event.guidance_mode === "detumbling"
+        ? "damping rotation locally"
       : event.guidance_mode?.includes("braking")
         ? "local braking"
         : "following the active maneuver";

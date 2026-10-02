@@ -110,13 +110,9 @@ async def test_omega_guard_fails_tumbling_run():
 
 
 async def test_fuel_exhaustion_fails_run():
-    session = await _run(
-        make_request(
-            position=(800.0, 0.0, 0.0),
-            max_steps=400,
-            fuel_consumption_rate_pct_per_s=0.5,  # 100% -> 200 s of thrust
-        )
-    )
+    request = make_request(position=(800.0, 0.0, 0.0), max_steps=400)
+    request.secondary.propellant_capacity_kg = 0.01
+    session = await _run(request)
     summary = session.summary
     assert summary.status == "failed"
     assert summary.failure_reason is FailureReason.FUEL_EXHAUSTED

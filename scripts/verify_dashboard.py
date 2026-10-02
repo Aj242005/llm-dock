@@ -98,7 +98,7 @@ def main():
             timeout=300000,
         )
         assert page.locator("#capture-announcement").is_visible()
-        assert page.locator("#capture-checks .passed").count() == 4
+        assert page.locator("#capture-checks .passed").count() == 6
         assert page.locator("#dock").is_disabled()
         page.locator('[data-camera="port"]').click()
         page.locator("#scene").scroll_into_view_if_needed()

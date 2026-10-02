@@ -28,6 +28,7 @@ from app.simulation.dynamics import (
     RigidBodyState,
     propagate_chaser,
 )
+from app.simulation.propellant import apply_propellant
 from app.simulation.rl.docking_env import (
     MAX_ACCEL_MPS2,
     MAX_FORCE_N,
@@ -84,9 +85,10 @@ def test_env_step_matches_runner_propagator():
         force_n=action[:3] * MAX_ACCEL_MPS2 * env.mass_kg,
         torque_nm=action[3:] * MAX_TORQUE_NM,
     )
+    fuel_state = before.deep_copy()
+    command, _, _ = apply_propellant(fuel_state, command, env.dt, legacy_rate=env.fuel_rate)
     expected = propagate_chaser(before, env.dt, env.n, command)
-    if np.linalg.norm(command.force_n) > 1e-6:
-        expected.fuel_pct = max(0.0, expected.fuel_pct - env.fuel_rate * env.dt)
+    expected.fuel_pct = fuel_state.fuel_pct
 
     after = env.current_state
     assert np.allclose(after.position, expected.position, atol=1e-9)
@@ -94,6 +96,7 @@ def test_env_step_matches_runner_propagator():
     assert np.allclose(after.quat, expected.quat, atol=1e-9)
     assert np.allclose(after.omega, expected.omega, atol=1e-9)
     assert after.fuel_pct == pytest.approx(expected.fuel_pct)
+    assert after.mass_kg == pytest.approx(fuel_state.mass_kg)
 
 
 def test_action_bounds_are_respected():

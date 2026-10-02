@@ -150,6 +150,8 @@ class TelemetryEvent(StreamEventBase):
     secondary_velocity_mps: Vector3 = Field(default_factory=lambda: [0.0, 0.0, 0.0])
     capture: dict = Field(default_factory=dict)
     command_limited: bool = False
+    planning_pending: bool = False
+    guidance_mode: str = "active_plan"
 
 
 class HeartbeatEvent(StreamEventBase):
@@ -176,10 +178,14 @@ class LlmDecisionEvent(StreamEventBase):
     rl_advisor: RlAdvisorSuggestion | None = None
     tool_results: list[dict] = Field(default_factory=list)
     safety_notes: list[str] = Field(default_factory=list)
+    snapshot_step: int = Field(default=0, ge=0)
+    snapshot_sim_time_s: float = Field(default=0.0, ge=0.0)
+    plan_age_s: float = Field(default=0.0, ge=0.0)
+    applied: bool = True
 
 
 class PlanningEvent(StreamEventBase):
-    """The simulator holds its current state while requesting a new plan."""
+    """A background planning request; physics and telemetry continue."""
 
     type: Literal["planning"] = "planning"
     provider: str

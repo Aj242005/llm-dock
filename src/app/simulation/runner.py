@@ -58,6 +58,7 @@ from app.simulation.anomalies import AnomalyManager
 from app.simulation.controllers import ControlContext, build_controller
 from app.simulation.dynamics import (
     DEFAULT_INERTIA,
+    Command,
     RigidBodyState,
     classify_phase,
     mean_motion_radps,
@@ -109,8 +110,8 @@ class SimulationRunner:
         )
         self.session.request_data = request.model_dump(mode="json")
         self._command_limited = False
-        self._tool_results = []
-        self._safety_notes = []
+        self._planning_task: asyncio.Task | None = None
+        self._guidance_mode = "coasting"
         # Lazy RL advisor (hybrid mode: the LLM planner sees a suggestion from
         # the trained policy). None = not requested or unavailable.
         self._rl_advisor: RlAdvisor | None = None
@@ -135,6 +136,10 @@ class SimulationRunner:
                 error=str(exc),
             )
         finally:
+            if self._planning_task is not None:
+                self._planning_task.cancel()
+                with suppress(asyncio.CancelledError, Exception):
+                    await self._planning_task
             self.session.finished.set()
 
     # ------------------------------------------------------------------
@@ -165,6 +170,7 @@ class SimulationRunner:
         subgoal: LlmSubgoal | None = None
         step = 0
         sim_time = 0.0
+        next_plan_step = 0
         self._current_step = step
         self._current_time = sim_time
 
@@ -194,8 +200,24 @@ class SimulationRunner:
                 await self._docked(truth, step, sim_time)
                 return
 
-            # ---- Plan from a fresh snapshot on cadence or after a fault ----
-            if cfg.llm_enabled and (step % cfg.llm_cadence_steps == 0 or new_details):
+            # Consume a completed provider response without ever waiting for it.
+            if self._planning_task is not None and self._planning_task.done():
+                completed = self._planning_task
+                self._planning_task = None
+                result = completed.result()
+                subgoal, applied = await self._accept_plan(
+                    result, observed, step, sim_time, anomalies
+                )
+                controller.reset(ctx)
+                if not applied:
+                    next_plan_step = step
+
+            if new_details:
+                next_plan_step = step
+
+            # Local rules are cheap and deterministic. Network providers run in
+            # one background task; overlapping requests are coalesced.
+            if cfg.llm_enabled and self._planning_task is None and step >= next_plan_step:
                 await self._emit(
                     PlanningEvent(
                         step=step,
@@ -204,57 +226,41 @@ class SimulationRunner:
                         status="started",
                     )
                 )
-                planning = asyncio.create_task(
-                    self._plan(observed, step, sim_time, anomalies, subgoal)
-                )
-                while not planning.done():
-                    if self.session.cancel_requested:
-                        planning.cancel()
-                        with suppress(asyncio.CancelledError):
-                            await planning
-                        await self._fail(step, sim_time, FailureReason.CANCELLED)
-                        return
-                    await asyncio.wait({planning}, timeout=0.1)
-                subgoal, source, rl_sugg = await planning
-                self._metrics.total_llm_calls += 1
-                if source == "heuristic_fallback":
-                    self._metrics.llm_fallback_calls += 1
-                self._last_source = source
-                await self._emit(
-                    PlanningEvent(
-                        step=step, sim_time_s=sim_time, provider=source, status="completed"
+                next_plan_step = step + cfg.llm_cadence_steps
+                if isinstance(self.agent, HeuristicAgent):
+                    result = await self._plan(observed, step, sim_time, anomalies, subgoal)
+                    subgoal, _ = await self._accept_plan(
+                        result, observed, step, sim_time, anomalies
                     )
-                )
-                controller.reset(ctx)
-                await self._emit(
-                    LlmDecisionEvent(
-                        step=step,
-                        sim_time_s=sim_time,
-                        phase=self._phase_of(observed),
-                        subgoal=subgoal,
-                        source=source,
-                        anomaly_context=[
-                            d
-                            for d in (st.current_detail for st in anomalies.states)
-                            if d is not None
-                        ],
-                        priority_change=anomalies.priority_change_active(step),
-                        metrics_so_far=self._metrics.model_copy(deep=True),
-                        rl_advisor=rl_sugg,
-                        tool_results=self._tool_results,
-                        safety_notes=self._safety_notes,
+                    controller.reset(ctx)
+                else:
+                    self._planning_task = asyncio.create_task(
+                        self._plan(observed.deep_copy(), step, sim_time, anomalies, subgoal)
                     )
-                )
-                if self.session.cancel_requested:
-                    await self._fail(step, sim_time, FailureReason.CANCELLED)
-                    return
+                    # Give the task a turn to capture its input before advancing faults.
+                    await asyncio.sleep(0)
             elif not cfg.llm_enabled and subgoal is None:
                 subgoal = _STATIC_SUBGOAL
                 self._last_source = None
                 controller.reset(ctx)
 
             # ---- low-level control from the *observed* state ----
-            command = controller.compute(observed, subgoal, dt, ctx)
+            active_subgoal = subgoal
+            self._guidance_mode = "active_plan" if subgoal is not None else "coasting"
+            if aborting or sensor_stale:
+                # Fault response never waits for a network plan or trusts an old one.
+                active_subgoal = LlmSubgoal(
+                    target_position_m=observed.position.tolist(),
+                    target_velocity_mps=[0, 0, 0],
+                    closing_speed_mps=0,
+                    rationale="Local safety controller: brake during abort or sensor loss.",
+                )
+                self._guidance_mode = "abort_braking" if aborting else "sensor_braking"
+            command = (
+                controller.compute(observed, active_subgoal, dt, ctx)
+                if active_subgoal is not None
+                else Command()
+            )
             # Reserve enough distance to brake before the shared capture envelope.
             # Apply this to actual motion, not just to the LLM's velocity proposal.
             limits = self._motion_envelope(truth)
@@ -360,10 +366,84 @@ class SimulationRunner:
             until = asyncio.get_running_loop().time() + delay
             while not self.session.cancel_requested and asyncio.get_running_loop().time() < until:
                 await asyncio.sleep(min(0.1, until - asyncio.get_running_loop().time()))
+            # Unpaced experiments must also let provider tasks and Stop make progress.
+            await asyncio.sleep(0)
 
     # ------------------------------------------------------------------
     # Planning
     # ------------------------------------------------------------------
+
+    async def _accept_plan(self, result, observed, step, sim_time, anomalies):
+        """Recheck a returned snapshot against the current state before applying it."""
+        subgoal, source, rl_sugg, snapshot, tools, notes = result
+        cfg = self.request.config
+        current_details = [
+            d for d in (st.current_detail for st in anomalies.states) if d is not None
+        ]
+        current = snapshot.model_copy(
+            update={
+                "step": step,
+                "sim_time_s": sim_time,
+                "phase": classify_phase(float(np.linalg.norm(observed.position))),
+                "range_m": float(np.linalg.norm(observed.position)),
+                "position_m": observed.position.tolist(),
+                "velocity_mps": observed.velocity.tolist(),
+                "orientation_quat": observed.quat.tolist(),
+                "angular_velocity_radps": observed.omega.tolist(),
+                "fuel_remaining_pct": observed.fuel_pct,
+                "anomaly_context": current_details,
+                "priority_change": anomalies.priority_change_active(step),
+                "capture": self._capture(observed),
+            }
+        )
+        age = sim_time - snapshot.sim_time_s
+        max_age = cfg.step_interval_s * cfg.llm_cadence_steps + cfg.planner_reserve_s
+        fault_changed = (
+            snapshot.priority_change != current.priority_change
+            or snapshot.anomaly_context != current_details
+        )
+        applied = age <= max_age and not fault_changed
+        if applied:
+            subgoal, source, fresh_notes = self._bound_plan(subgoal, source, current, observed)
+            notes = list(dict.fromkeys(notes + fresh_notes))
+        else:
+            notes.append(
+                "Response discarded: snapshot expired or fault context changed. Local braking applied."
+            )
+        self._metrics.total_llm_calls += 1
+        if source == "heuristic_fallback":
+            self._metrics.llm_fallback_calls += 1
+        self._last_source = source if applied else "local_safety"
+        await self._emit(
+            PlanningEvent(step=step, sim_time_s=sim_time, provider=source, status="completed")
+        )
+        await self._emit(
+            LlmDecisionEvent(
+                step=step,
+                sim_time_s=sim_time,
+                phase=self._phase_of(observed),
+                subgoal=subgoal,
+                source=source,
+                anomaly_context=current_details,
+                priority_change=current.priority_change,
+                metrics_so_far=self._metrics.model_copy(deep=True),
+                rl_advisor=rl_sugg,
+                tool_results=tools,
+                safety_notes=notes,
+                snapshot_step=snapshot.step,
+                snapshot_sim_time_s=snapshot.sim_time_s,
+                plan_age_s=age,
+                applied=applied,
+            )
+        )
+        if not applied:
+            subgoal = LlmSubgoal(
+                target_position_m=observed.position.tolist(),
+                target_velocity_mps=[0, 0, 0],
+                closing_speed_mps=0,
+                rationale="Local braking while fresh guidance is requested.",
+            )
+        return subgoal, applied
 
     def _motion_envelope(self, state: RigidBodyState) -> MotionLimits:
         """Bound applied velocity by speed limits and conservative stopping distance."""
@@ -403,11 +483,12 @@ class SimulationRunner:
         sim_time: float,
         anomalies: AnomalyManager,
         current_subgoal: LlmSubgoal | None,
-    ) -> tuple[LlmSubgoal, str, RlAdvisorSuggestion | None]:
+    ) -> tuple:
         range_m = float(np.linalg.norm(observed.position))
         anomaly_details = [
             d for d in (st.current_detail for st in anomalies.states) if d is not None
         ]
+        priority_change = anomalies.priority_change_active(step)
         # Hybrid mode: ask the trained RL policy for an advisory sub-goal.
         # Model loading/inference must not block SSE, status requests or Stop.
         rl_sugg = (
@@ -427,7 +508,7 @@ class SimulationRunner:
             fuel_remaining_pct=observed.fuel_pct,
             controller=self.request.config.controller.value,
             anomaly_context=anomaly_details,
-            priority_change=anomalies.priority_change_active(step),
+            priority_change=priority_change,
             rl_advisor=rl_sugg,
             capture=self._capture(observed),
             primary_limits=self.request.primary.motion_limits.model_dump(),
@@ -437,9 +518,7 @@ class SimulationRunner:
             mass_kg=observed.mass_kg,
             primary_velocity_mps=self.request.primary.velocity_mps,
         )
-        self._tool_results = [
-            {"name": t.name, "result": t.invoke({})} for t in docking_tools(inp)[:4]
-        ]
+        tools = [{"name": t.name, "result": t.invoke({})} for t in docking_tools(inp)[:4]]
         if isinstance(self.agent, HeuristicAgent):
             subgoal, source = await self.agent.reason(inp)
         else:
@@ -450,13 +529,21 @@ class SimulationRunner:
                 max_retries=self.settings.llm_max_retries,
                 backoff_s=self.settings.llm_retry_backoff_s,
             )
-            self._tool_results = self.agent.last_tools or self._tool_results
-        self._safety_notes = []
+            tools = self.agent.last_tools or tools
+        subgoal, source, notes = self._bound_plan(subgoal, source, inp, observed)
+        return subgoal, source, rl_sugg, inp, tools, notes
+
+    def _bound_plan(self, subgoal, source, inp, observed):
+        """Apply the same target and speed rules at request and response time."""
+        range_m = float(np.linalg.norm(observed.position))
+        anomaly_details = inp.anomaly_context
+        notes = []
         target = np.asarray(subgoal.target_position_m)
         if not np.isfinite(target).all() or np.linalg.norm(target) > max(range_m * 1.1, 1.25):
             subgoal = self.heuristic.plan(inp)
             source = "heuristic_fallback"
-            self._safety_notes.append("Rejected non-finite or diverging target.")
+            notes.append("Rejected non-finite or diverging target.")
+            target = np.asarray(subgoal.target_position_m)
         limits = self._motion_envelope(observed)
         relative_limits = MotionLimits(
             max_speed_mps=min(
@@ -485,9 +572,7 @@ class SimulationRunner:
                 desired_velocity *= transit_speed / np.linalg.norm(desired_velocity)
         velocity = limit_velocity(desired_velocity, relative_limits)
         if not np.allclose(velocity, subgoal.target_velocity_mps):
-            self._safety_notes.append(
-                "Target velocity reduced to the configured and phase envelope."
-            )
+            notes.append("Target velocity reduced to the configured and phase envelope.")
         subgoal.target_velocity_mps = velocity.tolist()
         subgoal.closing_speed_mps = min(subgoal.closing_speed_mps, float(np.linalg.norm(velocity)))
         if (
@@ -503,7 +588,7 @@ class SimulationRunner:
             subgoal.target_position_m = [0.0, 0.0, 0.0]
             subgoal.target_velocity_mps = (-observed.position / range_m * speed).tolist()
             subgoal.closing_speed_mps = speed
-            self._safety_notes.append(
+            notes.append(
                 "Final approach aligned with the measured port vector, with capture-speed margin."
             )
         # The position controller stops at its waypoint. A short RL lookahead
@@ -521,9 +606,7 @@ class SimulationRunner:
             and distance_to_goal < min(range_m * 0.5, travel * 1.5)
         ):
             subgoal.target_position_m = (observed.position * 0.5).tolist()
-            self._safety_notes.append(
-                "Extended the inward waypoint to sustain motion until the next replan."
-            )
+            notes.append("Extended the inward waypoint to sustain motion until the next replan.")
         if not subgoal.alternatives:
             subgoal.alternatives = [
                 "Faster approach rejected: braking margin decreases.",
@@ -534,10 +617,10 @@ class SimulationRunner:
                 "Learned velocity advice was adopted and bounded by the motion envelope."
                 if "RL advisor adopted" in subgoal.rationale
                 else "Learned advice was available; the planner used a bounded port-directed maneuver."
-                if rl_sugg
+                if inp.rl_advisor
                 else "No learned proposal was supplied for this decision."
             )
-        return subgoal, source, rl_sugg
+        return subgoal, source, notes
 
     def _advisor_suggestion(
         self,
@@ -682,6 +765,8 @@ class SimulationRunner:
                 ).tolist(),
                 capture=self._capture(state),
                 command_limited=self._command_limited,
+                planning_pending=self._planning_task is not None,
+                guidance_mode=self._guidance_mode,
             )
         )
         summary = self.session.summary

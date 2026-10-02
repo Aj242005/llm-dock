@@ -1,0 +1,58 @@
+{
+  "disposition": "ship",
+  "scope": "Continuous background planning behavior and associated status/provenance copy; incumbent research flight-operations dashboard preserved.",
+  "inputs": "Code-led refinement. No approved comp, decision comp, QUALITY BAR card, or new five-block direction contract supplied or required for this narrow incumbent extension. PRODUCT.md, DESIGN.md, and .impeccable/design.json are the inherited authorities. No browser, server, frontend mutation, or second detector pass performed by this reviewer.",
+  "persistence": {
+    "status": "pass",
+    "evidence": [
+      "PRODUCT.md describes research docking experiments, streamed telemetry, explicit applied commands, provider provenance, and independently verified capture conditions.",
+      "Token-bearing DESIGN.md and .impeccable/design.json exist; the changed files retain the approved palette, IBM Plex Sans, NASA ISS, dimensional concept chaser, shared XYZ grid, true metre scale, and native controls.",
+      "All five named captures were opened and valid: desktop-live.png and desktop-plan-applied.png show the live session after an applied response; scene-live.png shows the matching loaded scene; mobile-390.png and mobile-320.png show the stopped actual session with its decision. Desktop/mobile captures include the document top. None is represented as a pending-planning capture."
+    ]
+  },
+  "fidelity": [
+    {
+      "element": "TYPE",
+      "status": "match",
+      "evidence": "Desktop and mobile preserve the incumbent IBM Plex Sans hierarchy. styles.css sets h1 to clamp(30px, 3vw, 46px), h2 to 15px, h3 to 12px, and instruments to 26px with responsive variants. The supplied detector warning assumes every role is 16px and contradicts the linked CSS and captures; no type change is warranted."
+    },
+    {
+      "element": "MATERIAL",
+      "status": "match",
+      "evidence": "The real NASA ISS material, dimensional concept chaser, fixed XYZ grid, and labelled illustrative Earth remain visibly present. No replacement or imitation material was introduced by this copy/behavior refinement."
+    },
+    {
+      "element": "GROUND",
+      "status": "match",
+      "evidence": "The graphite page/workbench and darker scene preserve the DESIGN.md world; the changed files introduce no color or surface treatment."
+    },
+    {
+      "element": "Continuous measured motion while planning",
+      "status": "match",
+      "evidence": "main.js no longer sends running:false on a planning-start event; telemetry continues to update the measured scene, instruments, and trace. The actual Vertex session contains 90 planning_pending telemetry events from 0.5s through 45.0s, all marked coasting. Range changes from 99.97009187821533m to 97.67737058819624m and primary X from 0.005m to 0.45m before the first response. This evidence establishes continued physics at 1x rather than an animation that conceals latency."
+    },
+    {
+      "element": "Pending activity and delay explanation",
+      "status": "match",
+      "evidence": "Source ties pending status to coasting, local braking, or the active maneuver, and labels the scene Live telemetry · planning. Initial help states that motion continues while Gemini plans and that the returned plan is checked against current state. This pending-state finding is based on the actual SSE record plus source wiring; the supplied screenshots depict later applied/stopped states."
+    },
+    {
+      "element": "Returned decision age and applied/discarded provenance",
+      "status": "match",
+      "evidence": "The applied desktop response visibly states vertex and 45.0 s snapshot age; the recorded decision has snapshot_sim_time_s:0.0, plan_age_s:45.0, and applied:true. Source labels rejected responses as discarded with local braking, labels their history proposal Discarded proposal, and exposes snapshot time, age, and applied status in expandable tool evidence. runner.py checks age/fault context and current limits before acceptance. Rejected-response UI is source-reviewed, not claimed as a photographed state."
+    },
+    {
+      "element": "Responsive operating composition",
+      "status": "match",
+      "evidence": "Actual 390px and 320px captures retain setup actions, scene/camera controls, grid controls, telemetry, capture checks, trace, decision explanation, provenance history, and export within the stacked workbench. New provenance text remains within the established content regions in the desktop capture."
+    },
+    {
+      "element": "Truth and craft floor within changed scope",
+      "status": "match",
+      "evidence": "The real session is explicitly a cancelled verification run, not a docking-success statistic. No synthetic telemetry, invented outcome, new visual scaffold, decorative effect, or new floor violation is introduced by the scoped diff. The capture confirmation remains reserved for a server-terminal docked event."
+    }
+  ],
+  "ceiling": "Reached for the requested behavior/copy refinement: real measured motion and clock progression continue during provider latency, pending operation is labelled, and decision age/provenance remains inspectable. No QUALITY BAR card was supplied; broader visual-world ambition is outside this review. The single actual Vertex + PPO session supports continuous-planning behavior, not docking reliability or a performance guarantee.",
+  "material_fixes": [],
+  "keep": "Preserve measured telemetry and true spatial scale, the independent local safety envelope/current-state acceptance checks, explicit decision provenance, native operating controls, and the approved NASA ISS plus shared-grid flight-operations workbench."
+}

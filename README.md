@@ -46,10 +46,18 @@ Applied thrust is limited before integration. A stopping-distance envelope
 brakes toward **0.02 m/s within 5 m**. These are conservative simulation settings,
 not a calibrated specification of a particular spacecraft engine.
 Playback defaults to **1×**: each 0.5 s physics step is paced over 0.5 s of wall
-time. A 100 m approach takes at least 16 minutes, plus planning waits.
+time. A 100 m approach takes at least 16 minutes.
 Accelerated playback is explicitly selectable for experiments and does not
-increase the physical speed limit. The clock and spacecraft state are held
-while the planner responds; Stop cancels that wait.
+increase the physical speed limit. Physics, both spacecraft states, and SSE
+telemetry continue while Vertex plans in the background. The last accepted
+maneuver stays active; before the first response, the chaser coasts subject to
+the motion and stopping-distance envelope. Abort and sensor-loss braking act
+locally without waiting for a provider. One provider request runs at a time.
+Returned plans are checked against current state and limits; responses older
+than one planning interval plus the reserve, or with changed fault context, are
+discarded and local braking requests fresh guidance. Decision events record
+snapshot time, age, and whether the response was applied. Stop cancels the
+outstanding task.
 
 The primary spacecraft uses NASA's [International Space Station 3D model](https://science.nasa.gov/resource/international-space-station-3d-model/),
 served locally with optimized textures and geometry compression. Its forward

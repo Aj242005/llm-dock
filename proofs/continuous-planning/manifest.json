@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Actual physics and telemetry during Vertex background planning",
+  "files": {
+    "checks.json": "5a788ef1d9c92e6e94764047d8942903c5b14aef981fabbd51beefeb07e8af8f",
+    "detector.json": "8e562b5b7c85ca9cc870189a41fc591584ace84e07df02b4375ea7cf1c82ce17",
+    "finish-review.json": "7e8c043c8c447da9e527a42ceffa50c86df30361caa1cb7ef31c96bb69a70599",
+    "README.md": "8f0a9e296b1631679529e86e5a215aa28f12d3193ca17f5a1bbf025873682a73",
+    "screenshots/desktop-live.png": "effda7753b6bf83af13e83991c117d4ef663fa4b109249051d2ea8836c5c38ee",
+    "screenshots/desktop-plan-applied.png": "68040054b9debe82cc22d6ea6f17229823d521313d3b087b7c038e18937ce9da",
+    "screenshots/mobile-320.png": "a8ed6ee4c722ff220f0458cd0719a7f19b3ff9d8a10abd7c45e41e469bcf4c3f",
+    "screenshots/mobile-390.png": "ceb724ceffb2fca63cbe6e217e2d1c7502a3b0f22d3bc489742f30b7862667b3",
+    "screenshots/scene-live.png": "7826f1775d565ef390047a777005d487ea092a42756bd4aeb334759c75d134f3",
+    "source/frontend/index.html": "945d8b87ba38e52575f27b42edfbd7d1100f28f76f5acdc17d154bd78f97a21b",
+    "source/frontend/src/main.js": "9802a446be01c57eb9134683632356c16a67ee83adeaa541145f1cac23f1f10a",
+    "source/README.md": "44ce95279533a6b57378b3a2ec3ca8f05b043eb563513e3223298f4685a083b6",
+    "source/src/app/llm/reasoning_agent.py": "ffa67ac79f1c251f850a4a581df5775f45428a2b24037a2396f48af0b688250c",
+    "source/src/app/schemas/events.py": "120c9c823b81b687a6df517a897229293f05b82780c42457479abc56bf629306",
+    "source/src/app/simulation/runner.py": "4420608fe932e4a113b7ed73dd6a5e110dd08bd8c26b77c85f91cb46e0c5aea2",
+    "source/tests/test_slow_approach.py": "27da2cb70f2bb22d6484d5ce13782714ca22314959b110988c3bddc97a87c3f7",
+    "verification.json": "87a4849db2c6456f9735801d054389931354d375d9e8f25c11b0032b4d63415c",
+    "verify-live.py": "5ddf2bf8f5d4774894124ce360e2d9d4bc32c82e92e4bccf4a33feaba4b19914",
+    "vertex-session.json": "8a0b21931854a83119fc21839e301c7276706ecacbbc588aa7c47aedc276cd2e"
+  }
+}

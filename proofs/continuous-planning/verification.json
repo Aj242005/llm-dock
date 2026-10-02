@@ -1,0 +1,25 @@
+{
+  "provider": "vertex",
+  "model": null,
+  "planning_motion": {
+    "first_time_s": 0.5,
+    "last_time_s": 45.0,
+    "first_range_m": 99.97009187821533,
+    "last_range_m": 97.67737058819624,
+    "first_primary_position_m": [
+      0.005,
+      0.0,
+      0.0
+    ],
+    "last_primary_position_m": [
+      0.45,
+      0.0,
+      0.0
+    ]
+  },
+  "plan_age_s": 45.0,
+  "plan_applied": true,
+  "stop": "cancelled",
+  "javascript_errors": [],
+  "scope": "One real Vertex + PPO session at 1x with initial velocities; verifies continued physics, not docking success statistics."
+}

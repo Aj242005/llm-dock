@@ -13,7 +13,7 @@ import numpy as np
 
 
 def main():
-    output = Path("proofs/conservative-vertex")
+    output = Path("proofs/continuous-vertex-docking")
     output.mkdir(parents=True, exist_ok=True)
     request = {
         "primary": {"orbital_elements": {"semi_major_axis_m": 6878000}},
@@ -33,7 +33,9 @@ def main():
             "step_interval_s": 0.5,
             "max_steps": 6000,
             "llm_cadence_steps": 500,
-            "playback_speed": 1000,
+            # Provider latency now advances simulated time. Keep acceleration
+            # modest so a normal response fits within the planning-age budget.
+            "playback_speed": 5,
             "max_thrust_n": 2.5,
             "max_acceleration_mps2": 0.005,
             "near_port_speed_mps": 0.02,
@@ -73,7 +75,7 @@ def main():
         "status": summary["status"],
         "wall_time_s": time.monotonic() - started,
         "sim_time_s": telemetry[-1]["sim_time_s"],
-        "playback_speed": 1000,
+        "playback_speed": request["config"]["playback_speed"],
         "replan_every_steps": 500,
         "max_speed_mps": float(max(speeds)),
         "max_acceleration_mps2": float(

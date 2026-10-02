@@ -1,0 +1,12 @@
+{
+  "backend_tests": 114,
+  "test_command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -p pytest_asyncio.plugin -q",
+  "lint": "ruff check and format --check passed",
+  "build": "npm run build passed (Three.js chunk warning remains)",
+  "live_actual_provider": "vertex",
+  "configured_default_model": "gemini-3.8-flash",
+  "provider_request_model": null,
+  "captured_model_detail": "Request model is null: server default selected; provider response did not record model version metadata.",
+  "scope": "Single 1x Vertex call with PPO advice, motion and telemetry during45sdelay; not a flight certification or capture success benchmark.",
+  "harness_note": "Initial browser response wait timed out; no session created. Second start created actualsession then exportfailedonrelativeURL. Reconnected same session via mocked creation response so no additional provider call; exports/screenshots are actual serverevents. Stopped after first response."
+}

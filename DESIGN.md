@@ -100,10 +100,11 @@ readable beside the scene so researchers can compare commands with measured
 effects. The shared XYZ grid makes the same local port coordinates visible from
 centimetres to hundreds of metres per division.
 
-Motion follows backend measurements. A separate, labelled illustrative Earth
-and static star field frame the spacecraft. Controls remain stable, native, and
-task-focused; the only authored confirmation animation follows a server-verified
-capture.
+Motion follows backend measurements and continues while provider guidance is
+pending. Planning status and decision snapshot provenance remain readable beside
+current telemetry. A separate, labelled illustrative Earth and static star field
+frame the spacecraft. Controls remain stable, native, and task-focused; the only
+authored confirmation animation follows a server-verified capture.
 
 **Key Characteristics:**
 
@@ -113,6 +114,7 @@ capture.
 - Spatial telemetry
 - Shared XYZ coordinates at true metre scale
 - Measured motion with a labelled illustrative backdrop
+- Visible guidance state and decision snapshot provenance
 
 ## Colors
 
@@ -182,6 +184,31 @@ and native disclosures, fields, and checkboxes. Guidance entries show source and
 simulation time, short explanations, and expandable tool/alternative details.
 Empty and error states explain the next action. Keyboard focus is a two-pixel
 mint outline with a three-pixel offset.
+
+### Guidance and continuous motion
+
+The existing explanation panel and flat decision log carry planning activity;
+the scene and instruments continue receiving measured telemetry through SSE.
+The planning status uses "Planning in background" with "coasting under safety
+limits", "following the active maneuver", or "local braking", according to the
+telemetry event. Before the first maneuver, the spacecraft coast under the local
+safety envelope. Subsequent requests continue the active maneuver. Only one
+provider request runs at a time, and configured motion and actuator limits are
+enforced every physics step. Abort or sensor loss immediately selects local
+braking. The playback help states "Motion continues while Gemini plans."
+
+Received decisions report their snapshot age in simulated seconds. Expandable
+"Tools & learned advice" evidence includes the request snapshot time, age, and
+applied flag. The latest rationale, learned assessment, alternatives, and tool
+results come from that decision's request-time snapshot; they can describe an
+earlier measured state than the current instruments. A proposal outside its age
+budget or with a changed fault context is labelled "discarded" and "Discarded
+proposal"; the status states "Delayed response discarded · local braking".
+Accepted proposals are checked against current limits, with safety adjustments
+appended as "Applied limits". Stop and terminal events end the session and its
+pending request; the command status then reads "Last applied command · session
+ended". These states reuse the incumbent typography, separators, and labelled
+status treatment.
 
 ### Spacecraft and local frame
 
@@ -264,6 +291,8 @@ from its rendered width so text retains its size.
 - Do show units beside every configurable quantity and measurement.
 - Do keep numerical telemetry tied to backend events.
 - Do label the deterministic planner and provider fallback honestly.
+- Do keep planning activity, current telemetry, and request-time reasoning separately labelled.
+- Do expose decision snapshot age and whether a returned proposal was applied or discarded.
 - Do preserve standard form semantics and reduced-motion behavior.
 - Do identify the NASA ISS, concept chaser, fallback target, and illustrative scenery explicitly.
 - Do share the local coordinate frame and true metre scale across models, grid, and telemetry.

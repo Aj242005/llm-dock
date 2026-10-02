@@ -284,9 +284,11 @@ async function request(url, body) {
 
 function renderDecision(event) {
   $("planner-status").textContent =
-    event.source === "heuristic_fallback"
-      ? "Provider call failed · deterministic fallback applied"
-      : `Plan received from ${event.source}`;
+    event.applied === false
+      ? "Delayed response discarded · local braking"
+      : event.source === "heuristic_fallback"
+        ? "Provider call failed · deterministic fallback applied"
+        : `Plan received from ${event.source} · ${(event.plan_age_s || 0).toFixed(1)} s snapshot age`;
   $("latest-rationale").textContent = event.subgoal.rationale;
   if (event.safety_notes?.length) {
     $("latest-rationale").textContent +=
@@ -309,17 +311,20 @@ function renderDecision(event) {
   article.innerHTML =
     '<div class="decision-top"><span class="decision-source"></span><span class="decision-time"></span></div><h3></h3><p></p><div class="decision-target"></div><details><summary>Tools & learned advice</summary><pre></pre></details><details><summary>Alternatives considered</summary><ul></ul></details>';
   article.querySelector(".decision-source").textContent =
-    event.source.replaceAll("_", " ");
+    event.source.replaceAll("_", " ") + (event.applied === false ? " · discarded" : "");
   article.querySelector(".decision-time").textContent =
     `${event.sim_time_s.toFixed(1)} s · step ${event.step}`;
   article.querySelector("h3").textContent = event.phase.replaceAll("_", " ");
   article.querySelector("p").textContent = event.subgoal.rationale;
   article.querySelector(".decision-target").textContent =
-    `Target: ${formatVector(event.subgoal.target_position_m, 2)} m · ${event.subgoal.closing_speed_mps.toFixed(3)} m/s`;
+    `${event.applied === false ? "Discarded proposal" : "Target"}: ${formatVector(event.subgoal.target_position_m, 2)} m · ${event.subgoal.closing_speed_mps.toFixed(3)} m/s`;
   article.querySelector("pre").textContent = JSON.stringify(
     {
       tools: event.tool_results,
       learned_advice: event.rl_advisor || "No learned advice used",
+      snapshot_time_s: event.snapshot_sim_time_s,
+      age_s: event.plan_age_s,
+      applied: event.applied,
     },
     null,
     2,
@@ -395,6 +400,15 @@ function telemetry(event) {
   $("command-status").textContent = event.command_limited
     ? "Command adjusted to motion limits"
     : "Within configured actuator envelope";
+  if (event.planning_pending) {
+    const activity = event.guidance_mode === "coasting"
+      ? "coasting under safety limits"
+      : event.guidance_mode?.includes("braking")
+        ? "local braking"
+        : "following the active maneuver";
+    $("planner-status").textContent = `Planning in background · ${activity}`;
+    $("scene-state").textContent = "Live telemetry · planning";
+  }
   captureView(event.capture);
   samples.push([event.sim_time_s, event.range_m]);
   if (samples.length > 3000) samples = samples.filter((_, i) => i % 2 === 0);
@@ -428,13 +442,12 @@ $("mission-form").addEventListener("submit", async (event) => {
       const event = JSON.parse(e.data);
       if (event.status === "started") {
         $("planner-status").textContent =
-          `${event.provider} is planning · simulation clock held`;
-        $("scene-state").textContent = "Holding for guidance";
+          `${event.provider} is planning · motion continues`;
+        $("scene-state").textContent = "Live telemetry · planning";
         if (!decisionCount) {
           $("latest-rationale").textContent =
-            `${event.provider === "vertex" ? "Gemini" : event.provider} is preparing the first maneuver. The simulation clock is paused until the plan arrives.`;
+            `${event.provider === "vertex" ? "Gemini" : event.provider} is preparing the first maneuver. Physics continues under the local safety envelope; the returned plan will be checked against the current state.`;
         }
-        if (latest) scene.update({ ...latest, running: false });
       }
     });
     stream.addEventListener("telemetry", (e) => telemetry(JSON.parse(e.data)));

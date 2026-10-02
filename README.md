@@ -20,7 +20,8 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Open **http://127.0.0.1:8000**. API reference: `/docs`. Evidence: `/proofs/`.
-Demo mode needs no provider keys. For frontend development, run `npm run dev`
+Vertex AI is the default provider. Set `VERTEX_API_KEY` in `.env`; use
+`LLM_DOCKING_MODE=heuristic` for offline experiments. For frontend development, run `npm run dev`
 in `frontend`; Vite forwards API calls to port 8000. Or run `docker compose up --build`.
 Docker has not been built in this session.
 
@@ -29,12 +30,23 @@ to select the included Kaggle policy and its matching normalization file.
 Select **Use learned PPO advice** for the hybrid flow. Start, stop, capture,
 and export from the dashboard.
 
-Dashboard sessions start with 5–10 m between docking ports (7.5 m by default).
-Random placement stays inside that band, and invalid manual positions cannot
-start a session. The request sends `initial_separation_range_m: [5, 10]`, which
+Dashboard sessions start **100 m** apart, with editable starting bounds of
+**80–120 m**. Random placement stays inside the configured band, and invalid
+manual positions cannot start a session. The request sends `initial_separation_range_m`, which
 the backend validates using both three-dimensional port positions. This limit
 applies only to the initial state; capture still requires at most 1.25 m.
 Research API clients can omit the initial-range option for other experiments.
+
+The secondary defaults to **0.10 m/s** total and horizontal speed, **0.05 m/s**
+vertical speed, **2.5 N** total thrust, and **0.005 m/s²** total local acceleration.
+Applied thrust is limited before integration. A stopping-distance envelope
+brakes toward **0.02 m/s within 5 m**. These are conservative simulation settings,
+not a calibrated specification of a particular spacecraft engine.
+Playback defaults to **1×**: each 0.5 s physics step is paced over 0.5 s of wall
+time. A 100 m approach takes at least 16 minutes, plus planning waits.
+Accelerated playback is explicitly selectable for experiments and does not
+increase the physical speed limit. The clock and spacecraft state are held
+while the planner responds; Stop cancels that wait.
 
 The 3D view includes detailed schematic spacecraft, a separate illustrative
 Earth backdrop, and three cameras: **Track chaser**, **Both ports**, and
@@ -70,18 +82,21 @@ session export are saved in `.impeccable/review/`.
    `measure_distance`, `inspect_capture_gate`, `inspect_actuators`,
    `inspect_rl_heuristic`, `preview_maneuver`, and `submit_maneuver` tools.
    The model returns a target, short justification, and rejected alternatives.
+   The right panel displays the latest natural-language explanation, learned
+   advice assessment, applied limits, and alternatives above the decision history.
    Tools inspect or preview; only the runner applies actuator commands.
 4. Optional PPO advice uses the same observation definition as training.
    The deterministic fallback adopts safe inward velocity advice while keeping
    a port-directed waypoint. The LLM receives the full learned proposal and
    can adopt, cap, or reject it. The log shows tool readings and actual sources.
-5. Commands pass through per-axis force/torque and configured velocity limits.
+5. Commands pass through per-axis force/torque, total thrust, acceleration,
+   configured velocity limits, and the stopping-distance envelope.
    When no bounded force can maintain a limit after a disturbance, the run
    fails explicitly rather than editing the physical velocity. Minimum speed
    is a transit preference; braking and docking permit zero speed.
 6. Capture requires separation **at most min(1.25 m, primary radius, secondary
    radius, configured range)**, relative speed at most the configured tolerance
-   (default 0.1 m/s), attitude error at most the configured tolerance (default
+   (dashboard default 0.02 m/s; API default 0.1 m/s), attitude error at most the configured tolerance (default
    2 degrees), and relative rotation at most 0.05 rad/s. Manual and automatic
    capture share the same gate. Abort and stale sensor readings inhibit capture.
 
@@ -98,24 +113,35 @@ Set the matching server-side key in `.env`, restart, and select the provider:
 
 | Provider | Key |
 | --- | --- |
+| Vertex AI (default) | `VERTEX_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
 | Groq | `GROQ_API_KEY` |
 | OpenRouter | `OPENROUTER_API_KEY` |
 | Anthropic | `ANTHROPIC_API_KEY` |
 
 The optional model field overrides the server default. Set
+`LLM_DOCKING_LLM_MODEL_VERTEX` to change Vertex's model. The supplied credential
+successfully invoked **`gemini-3.8-flash`** through the Vertex express-mode
+endpoint and the LangChain tool loop in this session. The server uses Google
+Cloud API-key authentication; the credential remains in ignored `.env`.
+Set
 `LLM_DOCKING_LLM_BASE_URL` only for the OpenAI-compatible endpoint you intend
 to use. Credentials never enter the frontend, notebook, exports, or proofs.
 Provider failures and invalid output use labelled deterministic fallback.
 The dashboard shows short explanations, not private chain-of-thought.
 The included benchmark uses the deterministic planner, so it does not establish
-real-provider performance. No paid-provider calls were needed for verification.
+real-provider performance. Separate live Vertex checks validate connectivity,
+tool calling and explanations; they do not establish a mission success rate.
+The complete live Vertex + PPO demonstration is in `proofs/conservative-vertex/`.
 
 ## Kaggle notebook
 
 `notebook.ipynb` packages the Python source, dependency installation, two-T4
 checks, training controls, TensorBoard, fresh-seed evaluation, manifest checks,
 checkpoint resume, and evidence ZIP export. Enable Internet and GPU T4 x2.
+The notebook bundles the current source. Its retained outputs describe the
+earlier training runs, whose exact source snapshots remain in `/proofs`.
+Rerun evaluation when changing dynamics or control limits.
 Run in order; monitoring cells are nonblocking and can be rerun.
 Two GPUs train independent seeds, with separate memory. A small PPO MLP can
 run faster on CPU; no GPU speed advantage is claimed.

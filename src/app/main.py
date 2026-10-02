@@ -62,7 +62,13 @@ async def lifespan(_: FastAPI):
     log.info(
         "startup",
         mode=settings.mode,
-        model=settings.llm_model if settings.mode != "heuristic" else "heuristic (no network)",
+        model=(
+            settings.llm_model_vertex
+            if settings.mode == "vertex"
+            else settings.llm_model
+            if settings.mode != "heuristic"
+            else "heuristic (no network)"
+        ),
         controller=settings.sim_default_controller,
     )
     yield

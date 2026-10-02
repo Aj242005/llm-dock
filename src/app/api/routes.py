@@ -141,9 +141,10 @@ async def capabilities():
     return {
         "providers": {
             p: provider_has_key(p)
-            for p in ["heuristic", "openai", "openrouter", "groq", "anthropic"]
+            for p in ["vertex", "heuristic", "openai", "openrouter", "groq", "anthropic"]
         },
         "default_provider": settings.mode,
+        "default_models": {"vertex": settings.llm_model_vertex},
         "rl_available": bool(
             settings.rl_model_path
             and settings.rl_normalize_path

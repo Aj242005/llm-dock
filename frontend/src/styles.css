@@ -757,6 +757,40 @@ input[type="number"] {
   font-size: 11px;
   margin-bottom: 22px;
 }
+.planner-state {
+  font-size: 12px;
+  color: var(--accent);
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.latest-explanation {
+  padding: 16px 0 22px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.latest-explanation h3 {
+  color: var(--blue);
+  margin: 18px 0 8px;
+}
+.latest-explanation h3:first-child {
+  margin-top: 0;
+}
+.latest-explanation p {
+  color: #d3e0e6;
+  font-size: 13px;
+}
+.latest-explanation ul {
+  padding-left: 16px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+#playback-status {
+  display: block;
+  float: none;
+  color: var(--accent);
+}
 .active-command {
   padding-bottom: 20px;
   margin-bottom: 20px;

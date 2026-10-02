@@ -1,0 +1,24 @@
+{
+  "status": "docked",
+  "wall_time_s": 433.18700000000536,
+  "sim_time_s": 1802.5,
+  "playback_speed": 1000,
+  "replan_every_steps": 500,
+  "max_speed_mps": 0.10000000100678319,
+  "max_acceleration_mps2": 0.004995854933708786,
+  "max_thrust_n": 2.5000000000000004,
+  "final_range_m": 0.9885212205243317,
+  "provider_sources": [
+    "vertex",
+    "vertex",
+    "vertex",
+    "vertex",
+    "vertex",
+    "vertex",
+    "vertex",
+    "vertex"
+  ],
+  "learned_proposals": 8,
+  "near_port_speed_ok": true,
+  "scope": "Single accelerated live demonstration; not a measured provider success rate."
+}

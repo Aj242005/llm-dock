@@ -1,0 +1,5 @@
+{
+  "manual_capture": "passed",
+  "new_session_stop": "passed",
+  "scenario": "Explicit 7.5 m, heuristic, 200x playback, no PPO; 100 m runs saved separately."
+}

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import suppress
 from typing import Any
 
 import numpy as np
@@ -47,6 +48,7 @@ from app.schemas.events import (
     FailedEvent,
     LlmDecisionEvent,
     LlmSubgoal,
+    PlanningEvent,
     PrimaryFrame,
     RlAdvisorSuggestion,
     TelemetryEvent,
@@ -194,13 +196,35 @@ class SimulationRunner:
 
             # ---- Plan from a fresh snapshot on cadence or after a fault ----
             if cfg.llm_enabled and (step % cfg.llm_cadence_steps == 0 or new_details):
-                subgoal, source, rl_sugg = await self._plan(
-                    observed, step, sim_time, anomalies, subgoal
+                await self._emit(
+                    PlanningEvent(
+                        step=step,
+                        sim_time_s=sim_time,
+                        provider=cfg.provider or self.settings.mode,
+                        status="started",
+                    )
                 )
+                planning = asyncio.create_task(
+                    self._plan(observed, step, sim_time, anomalies, subgoal)
+                )
+                while not planning.done():
+                    if self.session.cancel_requested:
+                        planning.cancel()
+                        with suppress(asyncio.CancelledError):
+                            await planning
+                        await self._fail(step, sim_time, FailureReason.CANCELLED)
+                        return
+                    await asyncio.wait({planning}, timeout=0.1)
+                subgoal, source, rl_sugg = await planning
                 self._metrics.total_llm_calls += 1
                 if source == "heuristic_fallback":
                     self._metrics.llm_fallback_calls += 1
                 self._last_source = source
+                await self._emit(
+                    PlanningEvent(
+                        step=step, sim_time_s=sim_time, provider=source, status="completed"
+                    )
+                )
                 controller.reset(ctx)
                 await self._emit(
                     LlmDecisionEvent(
@@ -231,13 +255,18 @@ class SimulationRunner:
 
             # ---- low-level control from the *observed* state ----
             command = controller.compute(observed, subgoal, dt, ctx)
+            # Reserve enough distance to brake before the shared capture envelope.
+            # Apply this to actual motion, not just to the LLM's velocity proposal.
+            limits = self._motion_envelope(truth)
             command, self._command_limited = enforce_command(
                 truth,
                 command,
                 dt,
                 n,
                 self.request.primary.velocity_mps,
-                self.request.secondary.motion_limits,
+                limits,
+                cfg.max_thrust_n,
+                cfg.max_acceleration_mps2,
             )
 
             # ---- metrics on truth (physical state), pre-propagation ----
@@ -258,7 +287,14 @@ class SimulationRunner:
                 return
 
             # ---- propagate truth, burn fuel ----
+            previous_velocity = truth.velocity.copy()
             truth = propagate_chaser(truth, dt, n, command)
+            if (
+                np.linalg.norm((truth.velocity - previous_velocity) / dt)
+                > cfg.max_acceleration_mps2 + 1e-6
+            ):
+                await self._fail(step, sim_time, FailureReason.LIMIT_EXCEEDED)
+                return
             if np.linalg.norm(command.force_n) > 1e-6:
                 truth.fuel_pct = max(0.0, truth.fuel_pct - cfg.fuel_consumption_rate_pct_per_s * dt)
 
@@ -315,11 +351,48 @@ class SimulationRunner:
                 await self._fail(step, sim_time, FailureReason.MAX_STEPS_EXCEEDED)
                 return
 
-            await asyncio.sleep(cfg.stream_pacing_s)
+            delay = (
+                dt / cfg.playback_speed if cfg.playback_speed is not None else cfg.stream_pacing_s
+            )
+            # Interruptible pacing keeps Stop responsive even at 1× playback.
+            until = asyncio.get_running_loop().time() + delay
+            while not self.session.cancel_requested and asyncio.get_running_loop().time() < until:
+                await asyncio.sleep(min(0.1, until - asyncio.get_running_loop().time()))
 
     # ------------------------------------------------------------------
     # Planning
     # ------------------------------------------------------------------
+
+    def _motion_envelope(self, state: RigidBodyState) -> MotionLimits:
+        """Bound applied velocity by speed limits and conservative stopping distance."""
+        cfg = self.request.config
+        limits = self.request.secondary.motion_limits.model_copy()
+        distance = float(np.linalg.norm(state.position))
+        if distance > 5:
+            orbital = (
+                self.request.primary.orbital_elements or self.request.secondary.orbital_elements
+            )
+            n = orbital.mean_motion_radps or mean_motion_radps(orbital.semi_major_axis_m)
+            drift = (
+                propagate_chaser(state, cfg.step_interval_s, n).velocity - state.velocity
+            ) / cfg.step_interval_s
+            braking = max(
+                1e-6,
+                min(cfg.max_acceleration_mps2, cfg.max_thrust_n / state.mass_kg)
+                - float(np.linalg.norm(drift)),
+            )
+            reserve = cfg.planner_reserve_s + cfg.step_interval_s * cfg.llm_cadence_steps
+            available = max(0, distance - 5)
+            cap = -braking * reserve + np.sqrt(
+                (braking * reserve) ** 2 + cfg.near_port_speed_mps**2 + 2 * braking * available
+            )
+        else:
+            cap = min(cfg.near_port_speed_mps, cfg.dock_velocity_tol_mps * 0.95)
+        # Configured envelopes apply to absolute velocity; approach braking is
+        # relative to the primary. A moving primary needs its own velocity offset.
+        absolute_cap = cap + float(np.linalg.norm(self.request.primary.velocity_mps))
+        limits.max_speed_mps = min(limits.max_speed_mps, absolute_cap)
+        return limits
 
     async def _plan(
         self,
@@ -334,7 +407,12 @@ class SimulationRunner:
             d for d in (st.current_detail for st in anomalies.states) if d is not None
         ]
         # Hybrid mode: ask the trained RL policy for an advisory sub-goal.
-        rl_sugg = self._advisor_suggestion(observed, current_subgoal)
+        # Model loading/inference must not block SSE, status requests or Stop.
+        rl_sugg = (
+            await asyncio.to_thread(self._advisor_suggestion, observed, current_subgoal)
+            if self.request.config.rl_advisor_enabled
+            else None
+        )
         inp = ReasoningInput(
             step=step,
             sim_time_s=sim_time,
@@ -352,6 +430,10 @@ class SimulationRunner:
             capture=self._capture(observed),
             primary_limits=self.request.primary.motion_limits.model_dump(),
             secondary_limits=self.request.secondary.motion_limits.model_dump(),
+            max_thrust_n=self.request.config.max_thrust_n,
+            max_acceleration_mps2=self.request.config.max_acceleration_mps2,
+            mass_kg=observed.mass_kg,
+            primary_velocity_mps=self.request.primary.velocity_mps,
         )
         self._tool_results = [
             {"name": t.name, "result": t.invoke({})} for t in docking_tools(inp)[:4]
@@ -373,7 +455,7 @@ class SimulationRunner:
             subgoal = self.heuristic.plan(inp)
             source = "heuristic_fallback"
             self._safety_notes.append("Rejected non-finite or diverging target.")
-        limits = self.request.secondary.motion_limits
+        limits = self._motion_envelope(observed)
         relative_limits = MotionLimits(
             max_speed_mps=min(
                 limits.max_speed_mps, self.heuristic.phase_speed_caps.get(inp.phase, 1.0)
@@ -406,11 +488,53 @@ class SimulationRunner:
             )
         subgoal.target_velocity_mps = velocity.tolist()
         subgoal.closing_speed_mps = min(subgoal.closing_speed_mps, float(np.linalg.norm(velocity)))
+        if (
+            range_m <= 5
+            and range_m > 0
+            and inp.priority_change != "abort"
+            and not anomaly_details
+            and np.dot(velocity, observed.position) < 0
+        ):
+            # Learned lateral advice must not create a near-port orbit. Finish
+            # along the measured port vector, below the capture speed tolerance.
+            speed = min(float(np.linalg.norm(velocity)), limits.max_speed_mps)
+            subgoal.target_position_m = [0.0, 0.0, 0.0]
+            subgoal.target_velocity_mps = (-observed.position / range_m * speed).tolist()
+            subgoal.closing_speed_mps = speed
+            self._safety_notes.append(
+                "Final approach aligned with the measured port vector, with capture-speed margin."
+            )
+        # The position controller stops at its waypoint. A short RL lookahead
+        # point must not stall a long approach between planner calls.
+        travel = (
+            np.linalg.norm(velocity)
+            * self.request.config.step_interval_s
+            * self.request.config.llm_cadence_steps
+        )
+        if (
+            range_m > 5
+            and inp.priority_change != "abort"
+            and not anomaly_details
+            and np.dot(velocity, observed.position) < 0
+            and distance_to_goal < min(range_m * 0.5, travel * 1.5)
+        ):
+            subgoal.target_position_m = (observed.position * 0.5).tolist()
+            self._safety_notes.append(
+                "Extended the inward waypoint to sustain motion until the next replan."
+            )
         if not subgoal.alternatives:
             subgoal.alternatives = [
                 "Faster approach rejected: braking margin decreases.",
                 "Immediate capture rejected until all capture checks pass.",
             ]
+        if not subgoal.rl_assessment:
+            subgoal.rl_assessment = (
+                "Learned velocity advice was adopted and bounded by the motion envelope."
+                if "RL advisor adopted" in subgoal.rationale
+                else "Learned advice was available; the planner used a bounded port-directed maneuver."
+                if rl_sugg
+                else "No learned proposal was supplied for this decision."
+            )
         return subgoal, source, rl_sugg
 
     def _advisor_suggestion(

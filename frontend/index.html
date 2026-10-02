@@ -58,6 +58,7 @@
                 <summary>Guidance & capture</summary>
                 <label
                   >Planner<select id="provider">
+                    <option value="vertex" selected>Vertex AI · Gemini</option>
                     <option value="heuristic">Deterministic demo</option>
                     <option value="openai">OpenAI</option>
                     <option value="groq">Groq</option>
@@ -69,7 +70,7 @@
                   >Provider model<input
                     id="model"
                     type="text"
-                    placeholder="Use server default"
+                    placeholder="gemini-3.8-flash"
                     maxlength="120"
                 /></label>
                 <label
@@ -102,9 +103,9 @@
                     ><input
                       id="capture-speed"
                       type="number"
-                      value="0.1"
-                      step="0.01"
-                      min="0.01"
+                      value="0.02"
+                      step="0.005"
+                      min="0.005"
                       max="1"
                       required
                   /></label>
@@ -144,7 +145,7 @@
                     >Step budget<input
                       id="steps"
                       type="number"
-                      value="1200"
+                      value="6000"
                       step="1"
                       min="1"
                       max="100000"
@@ -156,12 +157,72 @@
                   ><input
                     id="cadence"
                     type="number"
-                    value="10"
+                    value="60"
                     min="1"
                     max="1000"
                     step="1"
                     required
                 /></label>
+                <div class="pair">
+                  <label
+                    >Starting range min.<span>m</span
+                    ><input
+                      id="start-range-min"
+                      type="number"
+                      value="80"
+                      min="1.25"
+                      max="10000"
+                      step="0.25"
+                      required
+                  /></label>
+                  <label
+                    >Starting range max.<span>m</span
+                    ><input
+                      id="start-range-max"
+                      type="number"
+                      value="120"
+                      min="1.25"
+                      max="10000"
+                      step="0.25"
+                      required
+                  /></label>
+                </div>
+                <div class="pair">
+                  <label
+                    >Max. total thrust<span>N</span
+                    ><input
+                      id="max-thrust"
+                      type="number"
+                      value="2.5"
+                      min="0.1"
+                      max="86"
+                      step="0.1"
+                      required
+                  /></label>
+                  <label
+                    >Max. acceleration<span>m/s²</span
+                    ><input
+                      id="max-acceleration"
+                      type="number"
+                      value="0.005"
+                      min="0.0001"
+                      max="1"
+                      step="0.0001"
+                      required
+                  /></label>
+                </div>
+                <label
+                  >Playback speed<select id="playback-speed">
+                    <option value="1">1× · real time</option>
+                    <option value="5">5× · accelerated</option>
+                    <option value="20">20× · accelerated</option>
+                    <option value="200">200× · experiment</option>
+                  </select></label
+                >
+                <p class="field-help">
+                  Planning holds the simulation clock. At 0.10 m/s, a 100 m
+                  approach takes at least 16 minutes at 1×.
+                </p>
                 <label class="check-label"
                   ><input id="auto-dock" type="checkbox" checked />Capture
                   automatically when eligible</label
@@ -252,6 +313,9 @@
             <div class="scene-caption">
               <span>Drag to orbit · scroll to zoom</span>
               <span>Schematic models · illustrative Earth backdrop</span>
+              <span id="playback-status"
+                >1× playback · 100 m initial separation</span
+              >
             </div>
             <div id="scene-message" hidden></div>
           </div>
@@ -276,7 +340,7 @@
           <div class="telemetry" aria-label="Live telemetry">
             <div>
               <span>Port separation</span
-              ><strong id="range">7.50 <small>m</small></strong>
+              ><strong id="range">100.00 <small>m</small></strong>
             </div>
             <div>
               <span>Relative speed</span
@@ -336,13 +400,33 @@
         </section>
         <aside class="decision-panel" aria-label="Guidance decisions">
           <div class="panel-heading">
-            <h2>Decision intelligence</h2>
+            <h2>LLM decision explanation</h2>
             <span id="decision-count">0 decisions</span>
           </div>
           <p class="decision-intro">
-            Decision explanations, measured tool readings, and the learned
-            policy’s proposal.
+            The model’s explanation of its chosen maneuver, with measured
+            evidence and alternatives.
           </p>
+          <div class="planner-state" role="status" id="planner-status">
+            Ready for Vertex AI
+          </div>
+          <section
+            class="latest-explanation"
+            aria-label="Latest maneuver explanation"
+            aria-live="polite"
+          >
+            <h3>Why this maneuver</h3>
+            <p id="latest-rationale">
+              Start a session to request a plan from Gemini. The simulation
+              holds its position while the model plans.
+            </p>
+            <h3>Learned policy assessment</h3>
+            <p id="latest-rl">No proposal received yet.</p>
+            <h3>Alternatives considered</h3>
+            <ul id="latest-alternatives">
+              <li>Alternatives will appear with the first decision.</li>
+            </ul>
+          </section>
           <div class="active-command">
             <h3>Applied thrust <span>N</span></h3>
             <output id="thrust">X 0.00 / Y 0.00 / Z 0.00</output

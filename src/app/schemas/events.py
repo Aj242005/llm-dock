@@ -94,6 +94,11 @@ class LlmSubgoal(BaseModel):
     closing_speed_mps: float = Field(ge=0.0)
     rationale: str = Field(default="", max_length=500)
     alternatives: list[str] = Field(default_factory=list, max_length=4)
+    rl_assessment: str = Field(
+        default="",
+        max_length=1000,
+        description="Plain-language explanation of adopting, limiting, or rejecting learned advice",
+    )
 
 
 class RlAdvisorSuggestion(BaseModel):
@@ -161,7 +166,7 @@ class LlmDecisionEvent(StreamEventBase):
     phase: DockingPhase
     subgoal: LlmSubgoal
     source: str = Field(
-        description="openai | openrouter | groq | anthropic | heuristic | heuristic_fallback"
+        description="vertex | openai | openrouter | groq | anthropic | heuristic | heuristic_fallback"
     )
     anomaly_context: list[AnomalyDetail] = Field(default_factory=list)
     priority_change: str | None = None
@@ -171,6 +176,14 @@ class LlmDecisionEvent(StreamEventBase):
     rl_advisor: RlAdvisorSuggestion | None = None
     tool_results: list[dict] = Field(default_factory=list)
     safety_notes: list[str] = Field(default_factory=list)
+
+
+class PlanningEvent(StreamEventBase):
+    """The simulator holds its current state while requesting a new plan."""
+
+    type: Literal["planning"] = "planning"
+    provider: str
+    status: Literal["started", "completed"]
 
 
 class AnomalyEvent(StreamEventBase):
@@ -199,6 +212,12 @@ class FailedEvent(StreamEventBase):
 
 
 DockingEvent = Annotated[
-    TelemetryEvent | HeartbeatEvent | LlmDecisionEvent | AnomalyEvent | DockedEvent | FailedEvent,
+    TelemetryEvent
+    | HeartbeatEvent
+    | LlmDecisionEvent
+    | PlanningEvent
+    | AnomalyEvent
+    | DockedEvent
+    | FailedEvent,
     Field(discriminator="type"),
 ]

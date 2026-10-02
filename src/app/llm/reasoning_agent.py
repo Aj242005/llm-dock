@@ -22,6 +22,7 @@ PROVIDER_BASE_URLS = {
     "groq": "https://api.groq.com/openai/v1",
 }
 PROVIDER_ENV_KEYS = {
+    "vertex": ("VERTEX_API_KEY",),
     "openai": ("OPENAI_API_KEY",),
     "openrouter": ("OPENROUTER_API_KEY",),
     "groq": ("GROQ_API_KEY",),
@@ -46,6 +47,10 @@ class ReasoningInput(BaseModel):
     capture: dict = Field(default_factory=dict)
     primary_limits: dict = Field(default_factory=dict)
     secondary_limits: dict = Field(default_factory=dict)
+    max_thrust_n: float = 86.6025403784
+    max_acceleration_mps2: float = 1.0
+    mass_kg: float = 500.0
+    primary_velocity_mps: list[float] = Field(default_factory=lambda: [0, 0, 0])
 
 
 def build_prompt(snapshot):
@@ -218,12 +223,27 @@ class LangChainAgent(ReasoningAgent):
         self.provider = provider
         self.last_tools = []
         defaults = {
+            "vertex": settings.llm_model_vertex,
             "openai": settings.llm_model,
             "groq": settings.llm_model_groq,
             "openrouter": settings.llm_model_openrouter,
             "anthropic": "claude-sonnet-4-5",
         }
-        if provider == "anthropic":
+        if provider == "vertex":
+            from langchain_google_genai import ChatGoogleGenerativeAI
+
+            self.chat = ChatGoogleGenerativeAI(
+                model=model or defaults[provider],
+                api_key=key,
+                vertexai=True,
+                temperature=0,
+                timeout=settings.llm_timeout_s,
+                max_retries=0,
+                max_output_tokens=3000,
+                thinking_level="low",
+                include_thoughts=False,
+            )
+        elif provider == "anthropic":
             from langchain_anthropic import ChatAnthropic
 
             self.chat = ChatAnthropic(
@@ -248,7 +268,12 @@ class LangChainAgent(ReasoningAgent):
         from app.llm.tools import docking_tools
 
         def submit_maneuver(
-            target_position_m, target_velocity_mps, closing_speed_mps, rationale, alternatives=None
+            target_position_m,
+            target_velocity_mps,
+            closing_speed_mps,
+            rationale,
+            alternatives=None,
+            rl_assessment="",
         ):
             return LlmSubgoal(
                 target_position_m=target_position_m,
@@ -256,6 +281,7 @@ class LangChainAgent(ReasoningAgent):
                 closing_speed_mps=closing_speed_mps,
                 rationale=rationale,
                 alternatives=alternatives or [],
+                rl_assessment=rl_assessment,
             )
 
         submit = StructuredTool.from_function(
@@ -274,10 +300,18 @@ class LangChainAgent(ReasoningAgent):
                     "Plan a satellite docking subgoal in a local frame: X/Y horizontal, Z vertical. "
                     "Use the read-only tools to inspect separation, capture, motion limits and learned PPO advice. "
                     "Submit one maneuver. Reduce separation, brake before capture, and respect both envelopes. "
+                    "For an approach choose a port-directed waypoint around half the current separation. "
+                    "The controller brakes at that waypoint: do not copy an RL lookahead point only centimetres "
+                    "ahead, which would stall the approach before the next replan. Learned velocity is advisory. "
                     "A positive minimum speed is only a transit preference; allow zero for braking and docking. "
                     "For abort hold current position and brake. For sensor loss brake conservatively. "
                     "Compare learned advice against limits and explain adoption or rejection. "
-                    "Give a short decision justification and rejected alternatives, without private deliberation. "
+                    "The simulation clock is held while you plan. Preserve large braking margins. "
+                    "Provide rationale in plain natural-language sentences for an operator: explain measured "
+                    "separation and velocity, the chosen direction and safe speed, and why it fits the readings. "
+                    "Provide rl_assessment explaining adoption, limitation or rejection of the learned advice. "
+                    "Explain rejected alternatives in ordinary language. These are decision explanations, "
+                    "not private deliberation. "
                     "Capture is independently gated at at most 1.25 m. Do not claim capture yourself."
                 )
             ),
@@ -286,7 +320,10 @@ class LangChainAgent(ReasoningAgent):
             ),
         ]
         for _ in range(4):
-            response = await chat.ainvoke(messages)
+            if self.provider == "vertex":
+                response = await chat.ainvoke(messages, tool_choice="any")
+            else:
+                response = await chat.ainvoke(messages)
             messages.append(response)
             if not response.tool_calls:
                 raise ValueError("Provider did not return a tool call")

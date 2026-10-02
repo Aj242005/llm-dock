@@ -254,9 +254,41 @@ class SimulationConfig(BaseModel):
     # frontend; 0 = stream as fast as the sim produces events).
     stream_pacing_s: float = Field(default=0.0, ge=0.0, le=1.0)
     seed: int | None = Field(default=None, description="RNG seed for reproducible noise/impulses")
-    provider: Literal["heuristic", "openai", "openrouter", "groq", "anthropic"] | None = None
+    provider: Literal["vertex", "heuristic", "openai", "openrouter", "groq", "anthropic"] | None = (
+        None
+    )
     model: str | None = Field(default=None, min_length=1, max_length=120)
     auto_dock: bool = True
+    playback_speed: float | None = Field(
+        default=None,
+        gt=0,
+        le=1000,
+        description="Simulation seconds per wall second; 1 is real time. None uses legacy stream pacing.",
+    )
+    max_thrust_n: float = Field(
+        default=86.6025403784,
+        gt=0,
+        le=100,
+        description="Maximum total translational thrust in newtons",
+    )
+    max_acceleration_mps2: float = Field(
+        default=1.0,
+        gt=0,
+        le=1,
+        description="Maximum translational acceleration, including orbital drift",
+    )
+    near_port_speed_mps: float = Field(
+        default=0.05,
+        gt=0,
+        le=0.1,
+        description="Relative speed ceiling within five metres, including braking approach",
+    )
+    planner_reserve_s: float = Field(
+        default=5.0,
+        ge=0,
+        le=120,
+        description="Extra stopping-time margin for conservative approaches",
+    )
     initial_separation_range_m: tuple[float, float] | None = Field(
         default=None,
         description="Optional inclusive starting port-distance bounds [minimum, maximum] in metres",

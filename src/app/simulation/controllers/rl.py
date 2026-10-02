@@ -53,8 +53,13 @@ class RlController(Controller):
                 "`python -m app.simulation.rl.train_ppo` first)"
             )
 
+        import torch
         from stable_baselines3 import PPO  # deferred: optional dependency
         from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+
+        # Small MLP inference is faster with few threads and leaves CPU capacity
+        # for the simulator, event stream and browser.
+        torch.set_num_threads(2)
 
         self._model = PPO.load(self.model_path, device=device)
         # VecNormalize.load re-wraps a venv (only used for its spaces/attrs;

@@ -47,28 +47,56 @@ def capture_checks(
     return {"eligible": all(checks.values()), "checks": checks, "shared_range_m": radius}
 
 
-def enforce_command(state, command, dt, n, primary_velocity, limits):
+def enforce_command(
+    state,
+    command,
+    dt,
+    n,
+    primary_velocity,
+    limits,
+    max_thrust_n=86.6025403784,
+    max_acceleration_mps2=1.0,
+):
     """Adjust force before propagation; never silently clip the physical state."""
     primary_velocity = np.asarray(primary_velocity)
     force = np.clip(command.force_n, -50.0, 50.0)
+    magnitude = float(np.linalg.norm(force))
+    if magnitude > max_thrust_n:
+        force *= max_thrust_n / magnitude
     torque = np.clip(command.torque_nm, -20.0, 20.0)
     drift = (propagate_chaser(state, dt, n, Command()).velocity - state.velocity) / dt
-    baseline = np.clip(-drift * state.mass_kg, -50.0, 50.0)
+    # Brake toward the envelope when it narrows. Holding the current velocity
+    # would leave no feasible baseline once the stopping-distance cap decreases.
+    absolute_velocity = state.velocity + primary_velocity
+    desired_acceleration = (limit_velocity(absolute_velocity, limits) - absolute_velocity) / dt
+    acceleration_magnitude = float(np.linalg.norm(desired_acceleration))
+    if acceleration_magnitude > max_acceleration_mps2:
+        desired_acceleration *= max_acceleration_mps2 / acceleration_magnitude
+    baseline = np.clip((desired_acceleration - drift) * state.mass_kg, -50.0, 50.0)
+    baseline_magnitude = float(np.linalg.norm(baseline))
+    if baseline_magnitude > max_thrust_n:
+        baseline *= max_thrust_n / baseline_magnitude
 
     def feasible(candidate):
         velocity = state.velocity + (drift + candidate / state.mass_kg) * dt + primary_velocity
-        return np.allclose(velocity, limit_velocity(velocity, limits), atol=1e-9, rtol=0)
+        acceleration = drift + candidate / state.mass_kg
+        return np.linalg.norm(acceleration) <= max_acceleration_mps2 + 1e-9 and np.allclose(
+            velocity, limit_velocity(velocity, limits), atol=1e-9, rtol=0
+        )
 
     # Bisection stays within both the convex velocity envelope and actuator bounds.
-    if not feasible(force) and feasible(baseline):
-        low, high = 0.0, 1.0
-        for _ in range(30):
-            fraction = (low + high) / 2
-            candidate = baseline + fraction * (force - baseline)
-            if feasible(candidate):
-                low = fraction
-            else:
-                high = fraction
-        force = baseline + low * (force - baseline)
+    if not feasible(force):
+        if feasible(baseline):
+            low, high = 0.0, 1.0
+            for _ in range(30):
+                fraction = (low + high) / 2
+                candidate = baseline + fraction * (force - baseline)
+                if feasible(candidate):
+                    low = fraction
+                else:
+                    high = fraction
+            force = baseline + low * (force - baseline)
+        else:
+            force = baseline  # Best bounded braking; runner checks actual hard limits.
     adjusted = not np.allclose(force, command.force_n) or not np.allclose(torque, command.torque_nm)
     return Command(force_n=force, torque_nm=torque), adjusted

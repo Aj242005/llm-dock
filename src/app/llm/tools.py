@@ -3,6 +3,9 @@
 import numpy as np
 from langchain_core.tools import tool
 
+from app.schemas.docking import MotionLimits
+from app.simulation.safety import limit_velocity
+
 
 def docking_tools(snapshot):
     """Bind tools to one fresh state snapshot; the model cannot alter telemetry."""
@@ -29,6 +32,9 @@ def docking_tools(snapshot):
         """Read thruster limits and the configured primary and secondary motion envelopes."""
         return {
             "force_per_axis_n": 50.0,
+            "max_total_thrust_n": snapshot.max_thrust_n,
+            "max_acceleration_mps2": snapshot.max_acceleration_mps2,
+            "mass_kg": snapshot.mass_kg,
             "torque_per_axis_nm": 20.0,
             "primary_limits": snapshot.primary_limits,
             "secondary_limits": snapshot.secondary_limits,
@@ -54,6 +60,15 @@ def docking_tools(snapshot):
             "target_range_m": float(np.linalg.norm(target_position_m)),
             "reduces_range": bool(np.linalg.norm(target_position_m) < snapshot.range_m),
             "target_speed_mps": float(np.linalg.norm(target_velocity_mps)),
+            "within_motion_limits": bool(
+                np.allclose(
+                    np.asarray(target_velocity_mps) + snapshot.primary_velocity_mps,
+                    limit_velocity(
+                        np.asarray(target_velocity_mps) + snapshot.primary_velocity_mps,
+                        MotionLimits(**snapshot.secondary_limits),
+                    ),
+                )
+            ),
         }
 
     return [

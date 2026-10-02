@@ -50,15 +50,15 @@ function fields(prefix, label, primary) {
   const triple = (name, title, unit, values) =>
     `<div class="group-label">${title}<span>${unit}</span></div><div class="triplet">${["x", "y", "z"].map((axis, i) => `<label>${axis.toUpperCase()}<input id="${prefix}-${name}-${axis}" type="number" value="${values[i]}" step="0.01" required aria-label="${label} ${title} ${axis}"></label>`).join("")}</div>`;
   return `<details ${primary ? "" : "open"}><summary>${label}</summary><div class="satellite-name"><b class="${primary ? "primary" : "secondary"}-key"></b>${primary ? "Target docking port" : "Approaching docking port"}</div>
-  ${triple("position", "Position", "m", primary ? [0, 0, 0] : [7.5, 0, 0])}
-  ${!primary ? '<p class="field-help">Initial port separation must be 5–10 m. Docking proceeds within 1.25 m.</p>' : ""}
+  ${triple("position", "Position", "m", primary ? [0, 0, 0] : [100, 0, 0])}
+  ${!primary ? '<p class="field-help">100 m by default. Edit the starting range bounds under Guidance & capture.</p>' : ""}
   ${!primary ? '<button id="randomize" class="random-button" type="button"><i data-lucide="shuffle"></i>Randomize secondary position</button>' : ""}
   ${triple("velocity", "Velocity", "m/s", [0, 0, 0])}
   ${triple("attitude", "Attitude · roll / pitch / yaw", "deg", [0, 0, 0])}
   ${triple("omega", "Rotation rate", "rad/s", [0, 0, 0])}
   <div class="pair"><label>Mass <span>kg</span><input id="${prefix}-mass" type="number" value="500" min="1" max="100000" step="1" required></label><label>Fuel <span>%</span><input id="${prefix}-fuel" type="number" value="100" min="0" max="100" step="0.1" required></label></div>
-  <div class="pair"><label>Min. transit speed <span>m/s</span><input id="${prefix}-min" type="number" value="0" min="0" max="20" step="0.01" required></label><label>Max. speed <span>m/s</span><input id="${prefix}-max" type="number" value="2" min="0.01" max="20" step="0.01" required></label></div>
-  <div class="pair"><label>Max. horizontal <span>m/s</span><input id="${prefix}-horizontal" type="number" value="2" min="0.01" max="20" step="0.01" required></label><label>Max. vertical <span>m/s</span><input id="${prefix}-vertical" type="number" value="1" min="0.01" max="20" step="0.01" required></label></div>
+  <div class="pair"><label>Min. transit speed <span>m/s</span><input id="${prefix}-min" type="number" value="0" min="0" max="20" step="0.01" required></label><label>Max. speed <span>m/s</span><input id="${prefix}-max" type="number" value="${primary ? 2 : 0.1}" min="0.01" max="20" step="0.01" required></label></div>
+  <div class="pair"><label>Max. horizontal <span>m/s</span><input id="${prefix}-horizontal" type="number" value="${primary ? 2 : 0.1}" min="0.01" max="20" step="0.01" required></label><label>Max. vertical <span>m/s</span><input id="${prefix}-vertical" type="number" value="${primary ? 1 : 0.05}" min="0.01" max="20" step="0.01" required></label></div>
   <label>Port capture radius <span>m</span><input id="${prefix}-radius" type="number" value="1.25" min="0.01" max="1.25" step="0.01" required></label>
   ${primary ? '<label>Orbital semi-major axis <span>m</span><input id="orbit" type="number" value="6878000" min="6371000" step="1" required></label>' : ""}
   <p class="field-help">Zero speed is permitted during braking and capture.</p></details>`;
@@ -134,7 +134,15 @@ function payload() {
     },
     secondary: satellite("s", "Secondary"),
     config: {
-      initial_separation_range_m: [5, 10],
+      initial_separation_range_m: [
+        number("start-range-min"),
+        number("start-range-max"),
+      ],
+      max_thrust_n: number("max-thrust"),
+      max_acceleration_mps2: number("max-acceleration"),
+      near_port_speed_mps: Math.min(0.02, number("capture-speed")),
+      playback_speed: number("playback-speed"),
+      fuel_consumption_rate_pct_per_s: 0.001,
       controller: $("controller").value,
       provider: $("provider").value,
       model: $("model").value.trim() || null,
@@ -184,11 +192,18 @@ function preview() {
     data.secondary.velocity_mps,
   );
   const separation = norm(relative);
+  const minimum = number("start-range-min"),
+    maximum = number("start-range-max");
   $("s-position-x").setCustomValidity(
-    separation >= 5 && separation <= 10
+    minimum > 0 &&
+      minimum <= maximum &&
+      separation >= minimum &&
+      separation <= maximum
       ? ""
-      : `Initial port separation must be between 5 and 10 m (currently ${separation.toFixed(3)} m).`,
+      : `Initial port separation must be between ${minimum} and ${maximum} m (currently ${separation.toFixed(3)} m).`,
   );
+  $("playback-status").textContent =
+    `${number("playback-speed")}× playback · ${separation.toFixed(1)} m initial separation`;
 }
 // Reveal any invalid field before the browser tries to focus it.
 $("mission-form").addEventListener(
@@ -266,6 +281,24 @@ async function request(url, body) {
 }
 
 function renderDecision(event) {
+  $("planner-status").textContent =
+    event.source === "heuristic_fallback"
+      ? "Provider call failed · deterministic fallback applied"
+      : `Plan received from ${event.source}`;
+  $("latest-rationale").textContent = event.subgoal.rationale;
+  if (event.safety_notes?.length) {
+    $("latest-rationale").textContent +=
+      ` Applied limits: ${event.safety_notes.join(" ")}`;
+  }
+  $("scene-state").textContent = "Live telemetry";
+  $("latest-rl").textContent =
+    event.subgoal.rl_assessment || "No learned assessment supplied.";
+  $("latest-alternatives").replaceChildren();
+  for (const alternative of event.subgoal.alternatives || []) {
+    const item = document.createElement("li");
+    item.textContent = alternative;
+    $("latest-alternatives").append(item);
+  }
   if (!decisionCount) $("decisions").replaceChildren();
   decisionCount++;
   $("decision-count").textContent = `${decisionCount} decisions`;
@@ -303,6 +336,16 @@ function renderDecision(event) {
   $("decisions").prepend(article);
   while ($("decisions").children.length > 60)
     $("decisions").lastElementChild.remove();
+}
+
+function clearExplanation(starting = false) {
+  $("planner-status").textContent = starting
+    ? "Starting guidance request" : "Ready for a new session";
+  $("latest-rationale").textContent = starting
+    ? "Preparing the first maneuver request."
+    : "Start a session to request a new maneuver.";
+  $("latest-rl").textContent = "No proposal received for this session yet.";
+  $("latest-alternatives").replaceChildren();
 }
 
 function chart() {
@@ -360,10 +403,15 @@ $("mission-form").addEventListener("submit", async (event) => {
   $("error").hidden = true;
   const data = payload();
   preview();
+  clearExplanation(true);
   setRunning(true);
+  // Stop needs the newly created session URL. Enable it after the response so
+  // an immediate click cannot accidentally cancel the previous session.
+  $("cancel").disabled = true;
   $("phase").textContent = "Starting session";
   try {
     session = await request("/api/v1/docking/simulate", data);
+    $("cancel").disabled = false;
     $("session-id").textContent = session.session_id.slice(0, 12);
     $("export").disabled = false;
     samples = [];
@@ -373,6 +421,19 @@ $("mission-form").addEventListener("submit", async (event) => {
     $("decision-count").textContent = "0 decisions";
     if (stream) stream.close();
     stream = new EventSource(session.stream_url);
+    stream.addEventListener("planning", (e) => {
+      const event = JSON.parse(e.data);
+      if (event.status === "started") {
+        $("planner-status").textContent =
+          `${event.provider} is planning · simulation clock held`;
+        $("scene-state").textContent = "Holding for guidance";
+        if (!decisionCount) {
+          $("latest-rationale").textContent =
+            `${event.provider === "vertex" ? "Gemini" : event.provider} is preparing the first maneuver. The simulation clock is paused until the plan arrives.`;
+        }
+        if (latest) scene.update({ ...latest, running: false });
+      }
+    });
     stream.addEventListener("telemetry", (e) => telemetry(JSON.parse(e.data)));
     stream.addEventListener("llm_decision", (e) =>
       renderDecision(JSON.parse(e.data)),
@@ -382,6 +443,10 @@ $("mission-form").addEventListener("submit", async (event) => {
         const terminal = JSON.parse(e.data);
         stream.close();
         setRunning(false);
+        $("planner-status").textContent =
+          type === "docked"
+            ? "Capture confirmed · session ended"
+            : "Session stopped";
         if (latest)
           scene.update({
             ...latest,
@@ -445,6 +510,10 @@ $("export").onclick = () => {
 };
 $("reset").onclick = () => {
   $("mission-form").reset();
+  clearExplanation();
+  $("decisions").replaceChildren();
+  decisionCount = 0;
+  $("decision-count").textContent = "0 decisions";
   $("capture-announcement").hidden = true;
   $("scene-state").textContent = "Mission preview";
   $("phase").textContent = "Ready to simulate";
@@ -473,8 +542,12 @@ $("randomize").onclick = () => {
     seed = (1664525 * seed + 1013904223) >>> 0;
     return seed / 2 ** 32;
   };
-  // Avoid the endpoints so rounding coordinates cannot put a sample outside 5–10 m.
-  const radius = 5.02 + random() * 4.96;
+  // Leave a margin so coordinate rounding stays inside the configured band.
+  const minimum = number("start-range-min"),
+    maximum = number("start-range-max");
+  if (minimum >= maximum) return;
+  const margin = Math.min(0.02, (maximum - minimum) / 4);
+  const radius = minimum + margin + random() * (maximum - minimum - 2 * margin);
   const z = random() * 2 - 1;
   const angle = random() * Math.PI * 2;
   const values = [
@@ -498,6 +571,9 @@ request("/api/v1/capabilities")
     $("connection-light").classList.add("connected");
     for (const option of $("provider").options)
       if (!data.providers[option.value]) option.disabled = true;
+    $("provider").value = data.default_provider;
+    $("model").placeholder =
+      data.default_models?.[$("provider").value] || "Use server default";
     $("rl-advisor").disabled = !data.rl_available;
     $("controller").querySelector('[value="rl"]').disabled = !data.rl_available;
     $("rl-status").textContent = data.rl_available

@@ -42,32 +42,46 @@ def main():
         # Verify that absolute spacecraft coordinates become the correct relative range.
         page.locator("#satellite-fields details").first.evaluate("item => item.open = true")
         page.locator("#p-position-x").fill("100")
-        page.locator("#s-position-x").fill("107.5")
+        page.locator("#s-position-x").fill("200")
         page.locator("#s-position-x").dispatch_event("change")
-        assert page.locator("#range").inner_text() == "7.50 m"
-        for position in ["104.99", "110.01"]:
+        assert page.locator("#range").inner_text() == "100.00 m"
+        for position in ["179.99", "220.01"]:
             page.locator("#s-position-x").fill(position)
             page.locator("#s-position-x").dispatch_event("change")
             assert not page.locator("#mission-form").evaluate("form => form.checkValidity()")
         page.locator("#reset").click()
         assert page.locator("#mission-form").evaluate("form => form.checkValidity()")
-        assert page.locator("#range").inner_text() == "7.50 m"
-        results["initial_separation_validation"] = "7.5 m default; rejects below 5 m and above 10 m"
+        assert page.locator("#range").inner_text() == "100.00 m"
+        assert page.locator("#playback-speed").input_value() == "1"
+        results["initial_separation_validation"] = "100 m default; configurable 80–120 m band"
+
+        def short_capture_scenario():
+            # The 100 m backend and live Vertex runs have separate full exports.
+            # Use an explicit short scenario for browser capture interaction QA.
+            page.locator("#start-range-min").fill("5")
+            page.locator("#start-range-max").fill("10")
+            page.locator("#s-position-x").fill("7.5")
+            page.locator("#s-position-x").dispatch_event("change")
+            page.locator("#provider").select_option("heuristic")
+            page.locator("#playback-speed").select_option("200")
 
         # This is a real SSE session with a trained policy, when the server has one.
         page.locator(".settings").evaluate("item => item.open = true")
+        page.locator("#provider").select_option("heuristic")
+        page.locator("#playback-speed").select_option("200")
+        short_capture_scenario()
         learned = page.locator("#rl-advisor").is_enabled()
         if learned:
             page.locator("#rl-advisor").check()
         with page.expect_response("**/api/v1/docking/simulate") as created:
             page.locator("#start").click()
         assert created.value.status == 202, created.value.text()
-        page.wait_for_function("document.querySelectorAll('.decision').length > 0")
+        page.wait_for_function("document.querySelectorAll('.decision').length > 0", timeout=180000)
         page.wait_for_timeout(1500)
         page.screenshot(path=str(output / "desktop-live.png"), full_page=True)
         page.wait_for_function(
             "document.querySelector('#phase').textContent === 'Docking complete'",
-            timeout=90000,
+            timeout=300000,
         )
         assert page.locator("#capture-announcement").is_visible()
         assert page.locator("#capture-checks .passed").count() == 4
@@ -102,6 +116,7 @@ def main():
 
         # Stopping a running mission must release its controls and clear live thrust.
         page.locator("#reset").click()
+        page.locator("#provider").select_option("heuristic")
         page.locator("#start").click()
         page.wait_for_function("!document.querySelector('#cancel').disabled")
         page.locator("#cancel").click()
@@ -111,9 +126,12 @@ def main():
 
         # Manual capture requires an eligible live state; it cannot bypass the server gate.
         page.locator("#reset").click()
+        page.locator("#provider").select_option("heuristic")
+        page.locator("#playback-speed").select_option("200")
         page.locator("#auto-dock").uncheck()
+        short_capture_scenario()
         page.locator("#start").click()
-        page.wait_for_function("!document.querySelector('#dock').disabled", timeout=30000)
+        page.wait_for_function("!document.querySelector('#dock').disabled", timeout=300000)
         page.locator("#dock").click()
         page.wait_for_function(
             "document.querySelector('#phase').textContent === 'Docking complete'"
@@ -145,7 +163,7 @@ def main():
                 mobile.locator("#s-position-z").fill("10")
                 mobile.locator("#s-position-z").dispatch_event("change")
                 mobile.locator("#randomize").click()
-                assert 5 <= float(mobile.locator("#range").inner_text().split()[0]) <= 10
+                assert 80 <= float(mobile.locator("#range").inner_text().split()[0]) <= 120
                 assert mobile.locator("#mission-form").evaluate("form => form.checkValidity()")
                 # Let the offscreen-paused canvas draw the changed state before capture.
                 mobile.locator("#scene").scroll_into_view_if_needed()

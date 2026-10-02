@@ -1,0 +1,3172 @@
+{
+  "scope": "Research simulation; randomized 5-80 m starts, random attitude, 600 s budget; heuristic planner, no provider calls",
+  "checkpoint": "ppo_dock",
+  "aggregate": [
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "docked": 22,
+      "trials": 30,
+      "success_rate": 0.7333333333333333,
+      "wilson_95_percent": [
+        0.5555169795568831,
+        0.8581750444608938
+      ]
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "docked": 0,
+      "trials": 30,
+      "success_rate": 0.0,
+      "wilson_95_percent": [
+        -1.3877787807814457e-17,
+        0.113517091390478
+      ]
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "docked": 25,
+      "trials": 30,
+      "success_rate": 0.8333333333333334,
+      "wilson_95_percent": [
+        0.6643529481431982,
+        0.9266356575964831
+      ]
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "docked": 0,
+      "trials": 30,
+      "success_rate": 0.0,
+      "wilson_95_percent": [
+        -1.3877787807814457e-17,
+        0.113517091390478
+      ]
+    }
+  ],
+  "trials": [
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50000,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -32.3945120002795,
+        -25.688291383423042,
+        62.81011242794915
+      ],
+      "steps": 76,
+      "final_range_m": 0.7401474393761629,
+      "final_speed_mps": 0.09107497213255837,
+      "delta_v_mps": 5.5710546192747135,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50001,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        46.518899896689334,
+        45.26918423005505,
+        2.216459802391325
+      ],
+      "steps": 27,
+      "final_range_m": 20.378774837316907,
+      "final_speed_mps": 2.0017917115020607,
+      "delta_v_mps": 2.157994453234793,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50002,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        8.119214003751669,
+        8.811380070091444,
+        10.128175253104258
+      ],
+      "steps": 34,
+      "final_range_m": 0.2606863199288849,
+      "final_speed_mps": 0.06538038928413904,
+      "delta_v_mps": 2.6189835703772464,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50003,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        35.08288511666898,
+        52.987086483318365,
+        40.70863052111171
+      ],
+      "steps": 27,
+      "final_range_m": 36.91283420231672,
+      "final_speed_mps": 2.0046240816277345,
+      "delta_v_mps": 2.7083251486863,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50004,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        5.614014335735523,
+        1.8174350371263055,
+        -4.80273211250546
+      ],
+      "steps": 59,
+      "final_range_m": 0.16105149148235434,
+      "final_speed_mps": 0.024413824268219128,
+      "delta_v_mps": 1.6329599741276706,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50005,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        3.5611105546744377,
+        -17.330294593428814,
+        -3.033367821589268
+      ],
+      "steps": 66,
+      "final_range_m": 0.010455549942227058,
+      "final_speed_mps": 0.04261974569287905,
+      "delta_v_mps": 2.9138208616457275,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50006,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -4.083034054343997,
+        -36.80404261178279,
+        -24.71882953143217
+      ],
+      "steps": 56,
+      "final_range_m": 0.14536780549709466,
+      "final_speed_mps": 0.0310533668122264,
+      "delta_v_mps": 4.938250332798696,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50007,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        18.907727323507533,
+        -12.610847244312897,
+        14.327704571928615
+      ],
+      "steps": 65,
+      "final_range_m": 0.0015301618121089475,
+      "final_speed_mps": 0.04309541966295586,
+      "delta_v_mps": 4.39515891119791,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50008,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -24.240037977786844,
+        45.081133845962924,
+        17.619228957707612
+      ],
+      "steps": 55,
+      "final_range_m": 0.038976816121831605,
+      "final_speed_mps": 0.04590163288000283,
+      "delta_v_mps": 5.597121886164163,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50009,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        33.53663783488576,
+        -19.69343622720035,
+        5.968083504898963
+      ],
+      "steps": 57,
+      "final_range_m": 0.14370973257664005,
+      "final_speed_mps": 0.028907035265236067,
+      "delta_v_mps": 5.266323367285763,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50010,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -14.276188136494097,
+        -25.089117228012828,
+        13.874807765792006
+      ],
+      "steps": 63,
+      "final_range_m": 0.13860049775968156,
+      "final_speed_mps": 0.044803804938011255,
+      "delta_v_mps": 4.666847710114837,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50011,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -0.4533334151749372,
+        -14.492431886111225,
+        4.006149092845293
+      ],
+      "steps": 59,
+      "final_range_m": 0.13138738031266906,
+      "final_speed_mps": 0.024456404957179965,
+      "delta_v_mps": 2.4627325230163213,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50012,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -1.854233512500341,
+        -12.671031777706181,
+        -0.20791438775932364
+      ],
+      "steps": 59,
+      "final_range_m": 0.19047456466103305,
+      "final_speed_mps": 0.022430569189536332,
+      "delta_v_mps": 2.6321514097099405,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50013,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        -62.08827531902423,
+        17.617706346744352,
+        -29.824693519732747
+      ],
+      "steps": 15,
+      "final_range_m": 53.10426812468721,
+      "final_speed_mps": 2.00568722427105,
+      "delta_v_mps": 2.3312385772073694,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50014,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        23.508393947220377,
+        45.69146579494219,
+        -24.842380356105743
+      ],
+      "steps": 17,
+      "final_range_m": 35.97156362077533,
+      "final_speed_mps": 2.0053201575913646,
+      "delta_v_mps": 2.406273161253222,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50015,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -14.335194421978294,
+        -5.55100198336882,
+        -17.21416476704913
+      ],
+      "steps": 56,
+      "final_range_m": 0.0983662035616475,
+      "final_speed_mps": 0.03472786090061243,
+      "delta_v_mps": 3.38805596761112,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50016,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -4.49508234751479,
+        -34.51654488777184,
+        69.76101590176197
+      ],
+      "steps": 85,
+      "final_range_m": 0.5014349946954808,
+      "final_speed_mps": 0.09261381024443532,
+      "delta_v_mps": 5.285030526465874,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50017,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        -72.68616293811185,
+        -21.645004422108393,
+        -17.812835174368132
+      ],
+      "steps": 19,
+      "final_range_m": 54.68348458816938,
+      "final_speed_mps": 2.0019027683765342,
+      "delta_v_mps": 2.924315032803294,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50018,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -0.033172669325959435,
+        5.418740855776944,
+        1.7099198477864217
+      ],
+      "steps": 53,
+      "final_range_m": 0.046010339112631735,
+      "final_speed_mps": 0.03604476684863461,
+      "delta_v_mps": 1.7610418269058965,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50019,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        44.225176895653114,
+        12.08479992144583,
+        36.27398941241233
+      ],
+      "steps": 15,
+      "final_range_m": 39.93042627182316,
+      "final_speed_mps": 2.0010361272323163,
+      "delta_v_mps": 2.2859607310645793,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50020,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -27.6373448241858,
+        24.130867050895862,
+        13.340063511671785
+      ],
+      "steps": 50,
+      "final_range_m": 0.44989937103462957,
+      "final_speed_mps": 0.050339731462688504,
+      "delta_v_mps": 5.842893892185988,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50021,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        -21.689542340570654,
+        62.33079678985237,
+        -6.2159668101813965
+      ],
+      "steps": 16,
+      "final_range_m": 47.90054341046475,
+      "final_speed_mps": 2.006131995990147,
+      "delta_v_mps": 2.3477279771699613,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50022,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -9.742896027376043,
+        34.49498373333036,
+        16.370399765851275
+      ],
+      "steps": 67,
+      "final_range_m": 0.12631932701219,
+      "final_speed_mps": 0.029213762503063533,
+      "delta_v_mps": 5.359348384918132,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50023,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -2.8589435280915096,
+        -40.63436211513514,
+        1.5948596277603089
+      ],
+      "steps": 64,
+      "final_range_m": 0.09946126430825812,
+      "final_speed_mps": 0.0347062020730844,
+      "delta_v_mps": 4.6205793273732425,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50024,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        53.67197293514107,
+        -42.09972773622629,
+        25.60812230421924
+      ],
+      "steps": 33,
+      "final_range_m": 21.513193194751057,
+      "final_speed_mps": 2.004224557909562,
+      "delta_v_mps": 3.2368006582281015,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50025,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        7.4606115305579355,
+        8.943017234847341,
+        3.407215718745896
+      ],
+      "steps": 32,
+      "final_range_m": 0.10234992223535716,
+      "final_speed_mps": 0.037385050730572196,
+      "delta_v_mps": 2.233877265719095,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50026,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        9.553783164882704,
+        -23.642923055387218,
+        3.694135314252076
+      ],
+      "steps": 66,
+      "final_range_m": 0.052480117580915454,
+      "final_speed_mps": 0.03952639171528658,
+      "delta_v_mps": 3.6556056125828116,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50027,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -16.449821147674555,
+        0.9256113846720323,
+        19.15951473465137
+      ],
+      "steps": 64,
+      "final_range_m": 0.03313141510657605,
+      "final_speed_mps": 0.04248056406026866,
+      "delta_v_mps": 3.808903919529211,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50028,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -24.135588074435386,
+        5.636115368659508,
+        -22.136794477490557
+      ],
+      "steps": 39,
+      "final_range_m": 1.2355217591893415,
+      "final_speed_mps": 0.066639502506998,
+      "delta_v_mps": 4.098842913098627,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": false,
+      "seed": 50029,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        65.61133230193961,
+        0.5702550872049101,
+        12.541030105844396
+      ],
+      "steps": 55,
+      "final_range_m": 0.3422797076719433,
+      "final_speed_mps": 0.050485785825457506,
+      "delta_v_mps": 4.999736228186731,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50000,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -32.3945120002795,
+        -25.688291383423042,
+        62.81011242794915
+      ],
+      "steps": 600,
+      "final_range_m": 0.13962116096698804,
+      "final_speed_mps": 0.03878298541912267,
+      "delta_v_mps": 6.3363185898791015,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50001,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        46.518899896689334,
+        45.26918423005505,
+        2.216459802391325
+      ],
+      "steps": 600,
+      "final_range_m": 0.13961985542595512,
+      "final_speed_mps": 0.03878333138041389,
+      "delta_v_mps": 6.328727061686041,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50002,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        8.119214003751669,
+        8.811380070091444,
+        10.128175253104258
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896677648618156,
+      "final_speed_mps": 0.04048081886830883,
+      "delta_v_mps": 3.8581869219042813,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50003,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        35.08288511666898,
+        52.987086483318365,
+        40.70863052111171
+      ],
+      "steps": 600,
+      "final_range_m": 0.13960785653743393,
+      "final_speed_mps": 0.03878737485188515,
+      "delta_v_mps": 6.964174371382231,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50004,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        5.614014335735523,
+        1.8174350371263055,
+        -4.80273211250546
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896615162045182,
+      "final_speed_mps": 0.04048138593022522,
+      "delta_v_mps": 3.5241388866624543,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50005,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        3.5611105546744377,
+        -17.330294593428814,
+        -3.033367821589268
+      ],
+      "steps": 600,
+      "final_range_m": 0.13960646816236,
+      "final_speed_mps": 0.03878698637340985,
+      "delta_v_mps": 3.9867576000455225,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50006,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -4.083034054343997,
+        -36.80404261178279,
+        -24.71882953143217
+      ],
+      "steps": 600,
+      "final_range_m": 0.13960611550054627,
+      "final_speed_mps": 0.038786960700615256,
+      "delta_v_mps": 5.999112496665815,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50007,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        18.907727323507533,
+        -12.610847244312897,
+        14.327704571928615
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896378197538994,
+      "final_speed_mps": 0.04048130436155121,
+      "delta_v_mps": 4.335656238396888,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50008,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -24.240037977786844,
+        45.081133845962924,
+        17.619228957707612
+      ],
+      "steps": 600,
+      "final_range_m": 0.1396066836236989,
+      "final_speed_mps": 0.038786945360472884,
+      "delta_v_mps": 6.371100138401733,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50009,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        33.53663783488576,
+        -19.69343622720035,
+        5.968083504898963
+      ],
+      "steps": 600,
+      "final_range_m": 0.13962335589996958,
+      "final_speed_mps": 0.038782216204745215,
+      "delta_v_mps": 5.746649211347913,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50010,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -14.276188136494097,
+        -25.089117228012828,
+        13.874807765792006
+      ],
+      "steps": 600,
+      "final_range_m": 0.1396121459016504,
+      "final_speed_mps": 0.038785632746991774,
+      "delta_v_mps": 4.828609487257614,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50011,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -0.4533334151749372,
+        -14.492431886111225,
+        4.006149092845293
+      ],
+      "steps": 600,
+      "final_range_m": 0.28966176307512687,
+      "final_speed_mps": 0.04047961547839662,
+      "delta_v_mps": 3.7223047213076526,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50012,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -1.854233512500341,
+        -12.671031777706181,
+        -0.20791438775932364
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896620866382282,
+      "final_speed_mps": 0.040479456951337686,
+      "delta_v_mps": 4.009777929706796,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50013,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -62.08827531902423,
+        17.617706346744352,
+        -29.824693519732747
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896309153212298,
+      "final_speed_mps": 0.04048175014611436,
+      "delta_v_mps": 6.504629111667908,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50014,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        23.508393947220377,
+        45.69146579494219,
+        -24.842380356105743
+      ],
+      "steps": 600,
+      "final_range_m": 0.13961370839772438,
+      "final_speed_mps": 0.03878520623027903,
+      "delta_v_mps": 6.863264278530451,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50015,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -14.335194421978294,
+        -5.55100198336882,
+        -17.21416476704913
+      ],
+      "steps": 600,
+      "final_range_m": 0.28964953126205795,
+      "final_speed_mps": 0.04048053166716941,
+      "delta_v_mps": 3.9745491372391233,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50016,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -4.49508234751479,
+        -34.51654488777184,
+        69.76101590176197
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896668417305562,
+      "final_speed_mps": 0.040480633484328295,
+      "delta_v_mps": 5.93835123290884,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50017,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -72.68616293811185,
+        -21.645004422108393,
+        -17.812835174368132
+      ],
+      "steps": 600,
+      "final_range_m": 0.289632462336666,
+      "final_speed_mps": 0.040481704350963855,
+      "delta_v_mps": 6.515969979569639,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50018,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -0.033172669325959435,
+        5.418740855776944,
+        1.7099198477864217
+      ],
+      "steps": 600,
+      "final_range_m": 0.13960761381374545,
+      "final_speed_mps": 0.03878733506092105,
+      "delta_v_mps": 3.597380006420452,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50019,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        44.225176895653114,
+        12.08479992144583,
+        36.27398941241233
+      ],
+      "steps": 600,
+      "final_range_m": 0.13962129778766288,
+      "final_speed_mps": 0.03878310508513142,
+      "delta_v_mps": 6.228182700917172,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50020,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -27.6373448241858,
+        24.130867050895862,
+        13.340063511671785
+      ],
+      "steps": 600,
+      "final_range_m": 0.1396227367229812,
+      "final_speed_mps": 0.03878236780076797,
+      "delta_v_mps": 6.199698308729898,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50021,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -21.689542340570654,
+        62.33079678985237,
+        -6.2159668101813965
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896615373891348,
+      "final_speed_mps": 0.04047946972370999,
+      "delta_v_mps": 6.3473299924616,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50022,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -9.742896027376043,
+        34.49498373333036,
+        16.370399765851275
+      ],
+      "steps": 600,
+      "final_range_m": 0.13960657630928422,
+      "final_speed_mps": 0.03878701263483077,
+      "delta_v_mps": 5.8053606324676785,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50023,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -2.8589435280915096,
+        -40.63436211513514,
+        1.5948596277603089
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896602398629898,
+      "final_speed_mps": 0.04047969972373866,
+      "delta_v_mps": 5.813412161205018,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50024,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        53.67197293514107,
+        -42.09972773622629,
+        25.60812230421924
+      ],
+      "steps": 600,
+      "final_range_m": 0.13962241953232127,
+      "final_speed_mps": 0.038782534324787996,
+      "delta_v_mps": 6.850220723403587,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50025,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        7.4606115305579355,
+        8.943017234847341,
+        3.407215718745896
+      ],
+      "steps": 600,
+      "final_range_m": 0.2896656327022052,
+      "final_speed_mps": 0.040480058288515,
+      "delta_v_mps": 3.7878386873601513,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50026,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        9.553783164882704,
+        -23.642923055387218,
+        3.694135314252076
+      ],
+      "steps": 600,
+      "final_range_m": 0.13960698131514843,
+      "final_speed_mps": 0.03878687439724985,
+      "delta_v_mps": 4.114058761978287,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50027,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -16.449821147674555,
+        0.9256113846720323,
+        19.15951473465137
+      ],
+      "steps": 600,
+      "final_range_m": 0.13961377843712924,
+      "final_speed_mps": 0.038785664867900575,
+      "delta_v_mps": 4.131030299934019,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50028,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -24.135588074435386,
+        5.636115368659508,
+        -22.136794477490557
+      ],
+      "steps": 600,
+      "final_range_m": 0.13961276332071734,
+      "final_speed_mps": 0.03878616714151768,
+      "delta_v_mps": 4.877126483300077,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "pid",
+      "rl_advisor": false,
+      "seed": 50029,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        65.61133230193961,
+        0.5702550872049101,
+        12.541030105844396
+      ],
+      "steps": 600,
+      "final_range_m": 0.1396116841848978,
+      "final_speed_mps": 0.03878632753819335,
+      "delta_v_mps": 6.725627102681085,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50000,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -32.3945120002795,
+        -25.688291383423042,
+        62.81011242794915
+      ],
+      "steps": 76,
+      "final_range_m": 0.6491190812722741,
+      "final_speed_mps": 0.08087692028379538,
+      "delta_v_mps": 5.341836147538076,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50001,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        46.518899896689334,
+        45.26918423005505,
+        2.216459802391325
+      ],
+      "steps": 28,
+      "final_range_m": 18.944030054207516,
+      "final_speed_mps": 2.0049606617745024,
+      "delta_v_mps": 2.290009333334827,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50002,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        8.119214003751669,
+        8.811380070091444,
+        10.128175253104258
+      ],
+      "steps": 31,
+      "final_range_m": 0.5210586552497354,
+      "final_speed_mps": 0.05748166104467787,
+      "delta_v_mps": 2.5460700875511098,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50003,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        35.08288511666898,
+        52.987086483318365,
+        40.70863052111171
+      ],
+      "steps": 28,
+      "final_range_m": 35.287732811733136,
+      "final_speed_mps": 2.002771040325227,
+      "delta_v_mps": 2.784863512500384,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50004,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        5.614014335735523,
+        1.8174350371263055,
+        -4.80273211250546
+      ],
+      "steps": 59,
+      "final_range_m": 0.1777718655139721,
+      "final_speed_mps": 0.021915196860918165,
+      "delta_v_mps": 1.7151529288792362,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50005,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        3.5611105546744377,
+        -17.330294593428814,
+        -3.033367821589268
+      ],
+      "steps": 61,
+      "final_range_m": 0.1551491940572474,
+      "final_speed_mps": 0.02291626145115643,
+      "delta_v_mps": 2.712105834849476,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50006,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -4.083034054343997,
+        -36.80404261178279,
+        -24.71882953143217
+      ],
+      "steps": 44,
+      "final_range_m": 0.4307510431261826,
+      "final_speed_mps": 0.07615025966209843,
+      "delta_v_mps": 4.806021223721925,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50007,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        18.907727323507533,
+        -12.610847244312897,
+        14.327704571928615
+      ],
+      "steps": 44,
+      "final_range_m": 0.17887578515308827,
+      "final_speed_mps": 0.05954731388431877,
+      "delta_v_mps": 3.8757705680598176,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50008,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -24.240037977786844,
+        45.081133845962924,
+        17.619228957707612
+      ],
+      "steps": 53,
+      "final_range_m": 0.15768994530255515,
+      "final_speed_mps": 0.05814499404367761,
+      "delta_v_mps": 5.6784240537508,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50009,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        33.53663783488576,
+        -19.69343622720035,
+        5.968083504898963
+      ],
+      "steps": 46,
+      "final_range_m": 0.6893729501617463,
+      "final_speed_mps": 0.08506070991439853,
+      "delta_v_mps": 4.964549975770111,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50010,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -14.276188136494097,
+        -25.089117228012828,
+        13.874807765792006
+      ],
+      "steps": 58,
+      "final_range_m": 0.1883688844688455,
+      "final_speed_mps": 0.022079535137815937,
+      "delta_v_mps": 4.452467692266831,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50011,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -0.4533334151749372,
+        -14.492431886111225,
+        4.006149092845293
+      ],
+      "steps": 37,
+      "final_range_m": 0.1977187288084372,
+      "final_speed_mps": 0.0469290145991542,
+      "delta_v_mps": 2.2901136370657955,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50012,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -1.854233512500341,
+        -12.671031777706181,
+        -0.20791438775932364
+      ],
+      "steps": 36,
+      "final_range_m": 0.5857846323281095,
+      "final_speed_mps": 0.08221748046905442,
+      "delta_v_mps": 2.4285421034118775,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50013,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        -62.08827531902423,
+        17.617706346744352,
+        -29.824693519732747
+      ],
+      "steps": 16,
+      "final_range_m": 51.22373619342342,
+      "final_speed_mps": 2.00100546415229,
+      "delta_v_mps": 2.381176096689227,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50014,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        23.508393947220377,
+        45.69146579494219,
+        -24.842380356105743
+      ],
+      "steps": 56,
+      "final_range_m": 0.6928423184971191,
+      "final_speed_mps": 0.07641316561665178,
+      "delta_v_mps": 6.1065803083226555,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50015,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -14.335194421978294,
+        -5.55100198336882,
+        -17.21416476704913
+      ],
+      "steps": 42,
+      "final_range_m": 0.6551775665358284,
+      "final_speed_mps": 0.09124629079226894,
+      "delta_v_mps": 3.319103452566998,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50016,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -4.49508234751479,
+        -34.51654488777184,
+        69.76101590176197
+      ],
+      "steps": 86,
+      "final_range_m": 0.5393611317884051,
+      "final_speed_mps": 0.07455536346640446,
+      "delta_v_mps": 5.17841597918085,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50017,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        -72.68616293811185,
+        -21.645004422108393,
+        -17.812835174368132
+      ],
+      "steps": 20,
+      "final_range_m": 52.93146567311741,
+      "final_speed_mps": 2.002255390780139,
+      "delta_v_mps": 2.9047031462355686,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50018,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -0.033172669325959435,
+        5.418740855776944,
+        1.7099198477864217
+      ],
+      "steps": 37,
+      "final_range_m": 0.19793932868805,
+      "final_speed_mps": 0.024427766426541948,
+      "delta_v_mps": 1.6178085831564946,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50019,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        44.225176895653114,
+        12.08479992144583,
+        36.27398941241233
+      ],
+      "steps": 58,
+      "final_range_m": 0.9490284967949686,
+      "final_speed_mps": 0.08598692067071319,
+      "delta_v_mps": 5.137988370561275,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50020,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -27.6373448241858,
+        24.130867050895862,
+        13.340063511671785
+      ],
+      "steps": 38,
+      "final_range_m": 1.223030964978379,
+      "final_speed_mps": 0.07305283532405069,
+      "delta_v_mps": 5.460981794744475,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50021,
+      "status": "failed",
+      "failure_reason": "limit_exceeded",
+      "initial_position_m": [
+        -21.689542340570654,
+        62.33079678985237,
+        -6.2159668101813965
+      ],
+      "steps": 19,
+      "final_range_m": 43.3926988182864,
+      "final_speed_mps": 2.0056638624514957,
+      "delta_v_mps": 2.623430195564838,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": false,
+          "alignment": false,
+          "rotation_rate": false
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50022,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -9.742896027376043,
+        34.49498373333036,
+        16.370399765851275
+      ],
+      "steps": 48,
+      "final_range_m": 1.0601336246020487,
+      "final_speed_mps": 0.09383615390042999,
+      "delta_v_mps": 5.118023411251661,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50023,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -2.8589435280915096,
+        -40.63436211513514,
+        1.5948596277603089
+      ],
+      "steps": 58,
+      "final_range_m": 0.19257324621851798,
+      "final_speed_mps": 0.03756101522861765,
+      "delta_v_mps": 4.598198935216814,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50024,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        53.67197293514107,
+        -42.09972773622629,
+        25.60812230421924
+      ],
+      "steps": 56,
+      "final_range_m": 0.8734641628020483,
+      "final_speed_mps": 0.08647374748226572,
+      "delta_v_mps": 5.636457748306957,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50025,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        7.4606115305579355,
+        8.943017234847341,
+        3.407215718745896
+      ],
+      "steps": 26,
+      "final_range_m": 0.05510297944877225,
+      "final_speed_mps": 0.027471778188251014,
+      "delta_v_mps": 2.1423531876717,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50026,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        9.553783164882704,
+        -23.642923055387218,
+        3.694135314252076
+      ],
+      "steps": 62,
+      "final_range_m": 0.09803571707896225,
+      "final_speed_mps": 0.03656036286775135,
+      "delta_v_mps": 3.4323445249133524,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50027,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -16.449821147674555,
+        0.9256113846720323,
+        19.15951473465137
+      ],
+      "steps": 40,
+      "final_range_m": 0.19750359767571626,
+      "final_speed_mps": 0.010228167223739376,
+      "delta_v_mps": 3.4639827212808316,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50028,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        -24.135588074435386,
+        5.636115368659508,
+        -22.136794477490557
+      ],
+      "steps": 40,
+      "final_range_m": 1.2343671591194032,
+      "final_speed_mps": 0.042022449377516834,
+      "delta_v_mps": 4.043972765848046,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "rl",
+      "rl_advisor": false,
+      "seed": 50029,
+      "status": "docked",
+      "failure_reason": null,
+      "initial_position_m": [
+        65.61133230193961,
+        0.5702550872049101,
+        12.541030105844396
+      ],
+      "steps": 55,
+      "final_range_m": 0.5003034240353792,
+      "final_speed_mps": 0.0898539199953278,
+      "delta_v_mps": 4.884344681154782,
+      "capture": {
+        "eligible": true,
+        "checks": {
+          "range": true,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50000,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -32.3945120002795,
+        -25.688291383423042,
+        62.81011242794915
+      ],
+      "steps": 600,
+      "final_range_m": 71.23228369079261,
+      "final_speed_mps": 0.05395460790159384,
+      "delta_v_mps": 10.343088005503922,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50001,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        46.518899896689334,
+        45.26918423005505,
+        2.216459802391325
+      ],
+      "steps": 600,
+      "final_range_m": 99.16683754829639,
+      "final_speed_mps": 0.05388939430811834,
+      "delta_v_mps": 10.577032670759582,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50002,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        8.119214003751669,
+        8.811380070091444,
+        10.128175253104258
+      ],
+      "steps": 600,
+      "final_range_m": 56.51805278827252,
+      "final_speed_mps": 0.05392008054529221,
+      "delta_v_mps": 10.035836488965987,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50003,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        35.08288511666898,
+        52.987086483318365,
+        40.70863052111171
+      ],
+      "steps": 600,
+      "final_range_m": 109.35030026926268,
+      "final_speed_mps": 0.05390034386133459,
+      "delta_v_mps": 9.898433309323586,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50004,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        5.614014335735523,
+        1.8174350371263055,
+        -4.80273211250546
+      ],
+      "steps": 600,
+      "final_range_m": 51.77269448525274,
+      "final_speed_mps": 0.0539197494641308,
+      "delta_v_mps": 10.002144910018147,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50005,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        3.5611105546744377,
+        -17.330294593428814,
+        -3.033367821589268
+      ],
+      "steps": 600,
+      "final_range_m": 52.31457455646732,
+      "final_speed_mps": 0.053920773174905616,
+      "delta_v_mps": 10.098956266659924,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50006,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -4.083034054343997,
+        -36.80404261178279,
+        -24.71882953143217
+      ],
+      "steps": 600,
+      "final_range_m": 58.96221976482535,
+      "final_speed_mps": 0.05391978013767963,
+      "delta_v_mps": 10.08785271209579,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50007,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        18.907727323507533,
+        -12.610847244312897,
+        14.327704571928615
+      ],
+      "steps": 600,
+      "final_range_m": 69.56611196143737,
+      "final_speed_mps": 0.05390878899432305,
+      "delta_v_mps": 10.056720334118369,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50008,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -24.240037977786844,
+        45.081133845962924,
+        17.619228957707612
+      ],
+      "steps": 600,
+      "final_range_m": 58.50558075195516,
+      "final_speed_mps": 0.0539406917324298,
+      "delta_v_mps": 10.300382157424028,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50009,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        33.53663783488576,
+        -19.69343622720035,
+        5.968083504898963
+      ],
+      "steps": 600,
+      "final_range_m": 81.09397816607097,
+      "final_speed_mps": 0.053896689046291704,
+      "delta_v_mps": 10.141301960484062,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50010,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -14.276188136494097,
+        -25.089117228012828,
+        13.874807765792006
+      ],
+      "steps": 600,
+      "final_range_m": 44.1014988100153,
+      "final_speed_mps": 0.053932126972713684,
+      "delta_v_mps": 10.380625268710018,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50011,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -0.4533334151749372,
+        -14.492431886111225,
+        4.006149092845293
+      ],
+      "steps": 600,
+      "final_range_m": 51.07268358723153,
+      "final_speed_mps": 0.05392153850368369,
+      "delta_v_mps": 9.897907952354968,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50012,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -1.854233512500341,
+        -12.671031777706181,
+        -0.20791438775932364
+      ],
+      "steps": 600,
+      "final_range_m": 50.133774083142946,
+      "final_speed_mps": 0.05392221616642615,
+      "delta_v_mps": 9.645382122619893,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50013,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -62.08827531902423,
+        17.617706346744352,
+        -29.824693519732747
+      ],
+      "steps": 600,
+      "final_range_m": 31.700525408732563,
+      "final_speed_mps": 0.05396584055220196,
+      "delta_v_mps": 10.169752735275424,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50014,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        23.508393947220377,
+        45.69146579494219,
+        -24.842380356105743
+      ],
+      "steps": 600,
+      "final_range_m": 86.00314596892964,
+      "final_speed_mps": 0.05390198766567821,
+      "delta_v_mps": 10.428930488653885,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50015,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -14.335194421978294,
+        -5.55100198336882,
+        -17.21416476704913
+      ],
+      "steps": 600,
+      "final_range_m": 37.89965082766147,
+      "final_speed_mps": 0.053930405796027335,
+      "delta_v_mps": 9.959701388309757,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50016,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -4.49508234751479,
+        -34.51654488777184,
+        69.76101590176197
+      ],
+      "steps": 600,
+      "final_range_m": 91.73610306116502,
+      "final_speed_mps": 0.053935885629016966,
+      "delta_v_mps": 10.21681868286477,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50017,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -72.68616293811185,
+        -21.645004422108393,
+        -17.812835174368132
+      ],
+      "steps": 600,
+      "final_range_m": 25.71386975274998,
+      "final_speed_mps": 0.05397673892002337,
+      "delta_v_mps": 10.11309866034259,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50018,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -0.033172669325959435,
+        5.418740855776944,
+        1.7099198477864217
+      ],
+      "steps": 600,
+      "final_range_m": 49.667916074197834,
+      "final_speed_mps": 0.053922363455181484,
+      "delta_v_mps": 9.648047626729769,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50019,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        44.225176895653114,
+        12.08479992144583,
+        36.27398941241233
+      ],
+      "steps": 600,
+      "final_range_m": 97.4874786658959,
+      "final_speed_mps": 0.05389497306886525,
+      "delta_v_mps": 10.262870608676444,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50020,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -27.6373448241858,
+        24.130867050895862,
+        13.340063511671785
+      ],
+      "steps": 600,
+      "final_range_m": 36.042985601207384,
+      "final_speed_mps": 0.053948728031881235,
+      "delta_v_mps": 10.105587005423999,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50021,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -21.689542340570654,
+        62.33079678985237,
+        -6.2159668101813965
+      ],
+      "steps": 600,
+      "final_range_m": 69.93944447988373,
+      "final_speed_mps": 0.05393712952534447,
+      "delta_v_mps": 10.288158102978953,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50022,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -9.742896027376043,
+        34.49498373333036,
+        16.370399765851275
+      ],
+      "steps": 600,
+      "final_range_m": 58.760536083699776,
+      "final_speed_mps": 0.05393046285881569,
+      "delta_v_mps": 10.187121579633295,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50023,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -2.8589435280915096,
+        -40.63436211513514,
+        1.5948596277603089
+      ],
+      "steps": 600,
+      "final_range_m": 60.950096322190404,
+      "final_speed_mps": 0.053921765207688814,
+      "delta_v_mps": 9.927864246453847,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50024,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        53.67197293514107,
+        -42.09972773622629,
+        25.60812230421924
+      ],
+      "steps": 600,
+      "final_range_m": 110.6708058381421,
+      "final_speed_mps": 0.053882641343786494,
+      "delta_v_mps": 9.962838674434643,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50025,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        7.4606115305579355,
+        8.943017234847341,
+        3.407215718745896
+      ],
+      "steps": 600,
+      "final_range_m": 55.954483224662134,
+      "final_speed_mps": 0.0539178227162181,
+      "delta_v_mps": 9.969734525123874,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50026,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        9.553783164882704,
+        -23.642923055387218,
+        3.694135314252076
+      ],
+      "steps": 600,
+      "final_range_m": 58.53725014243247,
+      "final_speed_mps": 0.05391697102115471,
+      "delta_v_mps": 10.121700334559376,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50027,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -16.449821147674555,
+        0.9256113846720323,
+        19.15951473465137
+      ],
+      "steps": 600,
+      "final_range_m": 40.44280552179545,
+      "final_speed_mps": 0.053936921670324836,
+      "delta_v_mps": 9.847530853569062,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50028,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        -24.135588074435386,
+        5.636115368659508,
+        -22.136794477490557
+      ],
+      "steps": 600,
+      "final_range_m": 34.13077090979843,
+      "final_speed_mps": 0.053935728843492736,
+      "delta_v_mps": 10.056841918302332,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    },
+    {
+      "controller": "lqr",
+      "rl_advisor": true,
+      "seed": 50029,
+      "status": "failed",
+      "failure_reason": "max_steps_exceeded",
+      "initial_position_m": [
+        65.61133230193961,
+        0.5702550872049101,
+        12.541030105844396
+      ],
+      "steps": 600,
+      "final_range_m": 114.87484678188326,
+      "final_speed_mps": 0.05386921015345733,
+      "delta_v_mps": 10.075346683240932,
+      "capture": {
+        "eligible": false,
+        "checks": {
+          "range": false,
+          "relative_speed": true,
+          "alignment": true,
+          "rotation_rate": true
+        },
+        "shared_range_m": 1.25
+      }
+    }
+  ]
+}

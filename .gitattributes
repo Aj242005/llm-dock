@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.png binary
+*.zip binary
+*.pt binary
+*.pkl binary
+*.npz binary
+*.ttf binary
+# Evidence manifests hash exact file bytes; never normalize experiment artifacts.
+proofs/** -text

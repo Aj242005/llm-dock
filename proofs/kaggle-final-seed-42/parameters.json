@@ -1,0 +1,85 @@
+{
+  "timesteps": 200000,
+  "out_dir": "/kaggle/working/llm-docking/proofs/kaggle-final-seed-42",
+  "device": "cuda:0",
+  "seed": 42,
+  "n_seeds": 8,
+  "n_steps": 256,
+  "batch_size": 512,
+  "lr": 1e-05,
+  "bc_episodes": 100,
+  "bc_epochs": 50,
+  "max_steps": 600,
+  "eval_freq": 20000,
+  "eval_episodes": 12,
+  "resume": null,
+  "resume_normalize": null,
+  "python": "3.12.13",
+  "torch": "2.10.0+cu128",
+  "capture_range_m": 1.25,
+  "initial_range_m": [
+    5,
+    80
+  ],
+  "dt_s": 1.0,
+  "observation": "14 values: subgoal position/velocity error, quaternion, rotation rate, fuel",
+  "reward": "bounded position cost, velocity and attitude cost, action cost, range progress, capture bonus 100",
+  "gpu": [
+    {
+      "name": "Tesla T4",
+      "memory_bytes": 15636037632
+    },
+    {
+      "name": "Tesla T4",
+      "memory_bytes": 15636037632
+    }
+  ],
+  "dependencies": {
+    "stable-baselines3": "2.9.0",
+    "gymnasium": "1.2.0",
+    "torch": "2.10.0+cu128",
+    "numpy": "2.0.2",
+    "tensorboard": "2.20.0",
+    "pydantic": "2.12.3"
+  },
+  "source_sha256": {
+    "app/__init__.py": "7c64b6ee520758b996a8d095597a3281997b705474ccfdb144c9f88fc5b290e6",
+    "app/config.py": "854cff91657bd076c35e273de4439053228977a824613bebce84e51a2d792078",
+    "app/main.py": "5e56ce566e14501e53f870f6acc08c6f8bfa5c5f288e7f9f851df28e46a7d49f",
+    "app/simulation/safety.py": "b7b053226125daa5f2bd0c19e664ddb9991b3587de979c2b68f262bc7d2d8707",
+    "app/simulation/__init__.py": "7fdd365f2aa50f416576c8cd1d603187a18ddd45bbfba6c48e98c14e35689c01",
+    "app/simulation/anomalies.py": "4348e85ef1b07c999be59fff93f611cf00cf691b9a5f1c90101b5d7bb38e66c4",
+    "app/simulation/runner.py": "9a9e89a6ca7b27c0a79296e4f5789e7c108302a9b5f3138981972d437ba7a9fe",
+    "app/simulation/dynamics.py": "6e264fe66561e3bc24d469249d7beabae748cd70d0b15ad5c868e1ff7c975919",
+    "app/schemas/__init__.py": "26c072468df3a8a5729606965b54db67587b0201ba22191a2073c7b71324362d",
+    "app/schemas/events.py": "d6a010376ed9f260808dfb96c8b46a572042bacf31197c734a4ebe35cb72a475",
+    "app/schemas/docking.py": "38b63c6f8c2cc9f6f367ba6f693314395658ac291df4c448d1585c2f101f82aa",
+    "app/sessions/__init__.py": "1b97ef301df400a782968275ff2dd268c6ad4bce50dec1b233ee951993c8bd01",
+    "app/sessions/store.py": "7ab2da85915db6c4ba1b679d73ece972b2f65efa0470b21b694b9df401adf1ab",
+    "app/llm/__init__.py": "89756a9e327ebc1d016a0165756168f2c1009712203e4a1d233746232eb0028a",
+    "app/llm/rl_advisor.py": "fac840e1a9132c3df98c6e9b49a7c8a880a020d20d899be3b393f45c6fefe7b7",
+    "app/llm/tools.py": "3a3dbf2e9f268d5108da06642add9e10d8cca67db793575c46ff77be69e0ff55",
+    "app/llm/reasoning_agent.py": "97d88ec03b1fdb97561aab9e31a88c6aa4089a7ed4e609aeee3c0ad6f1e70d6f",
+    "app/api/__init__.py": "91a778f8dd8b6702d0f764e0d69c9505a76a2c7694bf9ab572a69764154272d5",
+    "app/api/routes.py": "be9fc331d94be5c5df45e663ee0069716374c3ef4ea6350beb6b4c393d77dd99",
+    "app/simulation/controllers/__init__.py": "bd295c9bc11f5e13342fe94286c0c88f4d7651da41917073db54f7cab491657b",
+    "app/simulation/controllers/rl.py": "d2b7d93df3e7394fb21d40e9a2ff2adf8ba678f9b37771930fb8a24ce606346d",
+    "app/simulation/controllers/lqr.py": "876d19064bcf526e1d95ae365006f7b8d62b3943fc21b57628192326ec78aae3",
+    "app/simulation/controllers/base.py": "5dfb6582ad1414c483b98b7a88db036badd935a530290edb4252923b45f751ac",
+    "app/simulation/controllers/lqr_riccati.py": "db8779a5e88d86f4eb15ea70549c77eedf95cee867637e02373e674b5bacff67",
+    "app/simulation/controllers/pid.py": "dd5aee055d9d6cbfd0957295cc8d180b23bfc93e26920887dc678f2f0ab3a348",
+    "app/simulation/rl/__init__.py": "bc4239fb9f8a5f516c2caba598b0215fdf7d7087332d3fcc903461503dc5aaf4",
+    "app/simulation/rl/proofs.py": "f64f10c0fd675a1aabe6a8835863e6272e3ac95b7ccdb93ef2be2e9823a0ddb8",
+    "app/simulation/rl/evaluate_policy.py": "97d417f0fcfe94d0e8d6f2115f7c6471390458ae57c5b385ae3fd339f285e028",
+    "app/simulation/rl/docking_env.py": "768f4aaffea947c07f7dd3b5252a49af9b5a70a61b76a006009fef863ff931c4",
+    "app/simulation/rl/train_ppo.py": "b0caae86e191b9c419d86c770f4bf5d698ffa315733ad600a0a334a16c0743e8"
+  },
+  "motion_limits": {
+    "min_speed_mps": 0.0,
+    "max_speed_mps": 2.0,
+    "max_horizontal_speed_mps": 2.0,
+    "max_vertical_speed_mps": 1.0
+  },
+  "actual_timesteps": 200704,
+  "elapsed_seconds": 228.99968464799986
+}

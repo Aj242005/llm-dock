@@ -1,0 +1,101 @@
+{
+  "initial_separation_validation": "7.5 m default; rejects below 5 m and above 10 m",
+  "hybrid": {
+    "session": "c9c889f26d5b",
+    "learned_advice_enabled": true,
+    "summary": {
+      "session_id": "c9c889f26d5b4ddb80c50b6462def54d",
+      "status": "docked",
+      "stop_reason": "docked",
+      "failure_reason": null,
+      "steps_completed": 38,
+      "sim_time_s": 19.0,
+      "phase": "docked",
+      "final_secondary": {
+        "position_m": [
+          0.4037438255454848,
+          -0.02953882354134156,
+          0.00434599023033744
+        ],
+        "velocity_mps": [
+          -0.0937486355017011,
+          -0.00024047709124985344,
+          -0.00039638675628341977
+        ],
+        "orientation_quat": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "angular_velocity_radps": [
+          2.7799357042695257e-18,
+          -3.991191311016941e-18,
+          -3.0442664605477903e-21
+        ],
+        "fuel_remaining_pct": 99.04999999999978,
+        "orbital_elements": null,
+        "inertia_kg_m2": [
+          600.0,
+          900.0,
+          900.0
+        ],
+        "mass_kg": 500.0,
+        "name": "Spacecraft",
+        "capture_radius_m": 1.25,
+        "motion_limits": {
+          "min_speed_mps": 0.0,
+          "max_speed_mps": 2.0,
+          "max_horizontal_speed_mps": 2.0,
+          "max_vertical_speed_mps": 1.0
+        },
+        "inertial_position_m": null
+      },
+      "controller": "lqr",
+      "metrics": {
+        "delta_v_mps": 1.3546301359590707,
+        "ise": 384.3387823689821,
+        "max_commanded_thrust_n": 50.396699016520195,
+        "total_llm_calls": 4,
+        "llm_fallback_calls": 0,
+        "anomaly_events_count": 0
+      },
+      "events_emitted": 44,
+      "llm_enabled": true,
+      "error": null
+    }
+  },
+  "stop_restart": "passed",
+  "manual_capture": "passed",
+  "responsive_chart_text": "at least 10.5 screen pixels at 320 and 390px",
+  "viewports": [
+    {
+      "width": 320,
+      "content": 320
+    },
+    {
+      "width": 390,
+      "content": 390
+    },
+    {
+      "width": 768,
+      "content": 768
+    },
+    {
+      "width": 1440,
+      "content": 1440
+    }
+  ],
+  "javascript_errors": [],
+  "source_sha256": {
+    "frontend\\index.html": "35568426fbabdf668efd2f4750c5a883595b16fa688bd7e49ace1a19fa97ab44",
+    "frontend\\src\\main.js": "3c488892f15706c9b50ecd5f7d77c0537ffa46b708f16162715926027c9199f7",
+    "src\\app\\schemas\\docking.py": "7a5dcc3141181a346efbd5a1963a374cd367f5131546c30741613d796c5dc0e9",
+    "scripts\\verify_dashboard.py": "a949f092c0bb551c354b1fe2bbb06dc14354e2e5b9aa608bbcbc91fd09bf3706"
+  },
+  "validation": {
+    "tests": "45 schema/API/runner tests passed",
+    "ruff": "passed",
+    "frontend_build": "passed"
+  }
+}

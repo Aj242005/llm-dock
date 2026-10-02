@@ -1,0 +1,106 @@
+{
+  "hybrid": {
+    "session": "b5cfb4d8eb40",
+    "learned_advice_enabled": true,
+    "summary": {
+      "session_id": "b5cfb4d8eb404f38a434c7078b15700b",
+      "status": "docked",
+      "stop_reason": "docked",
+      "failure_reason": null,
+      "steps_completed": 118,
+      "sim_time_s": 59.0,
+      "phase": "docked",
+      "final_secondary": {
+        "position_m": [
+          -0.5097103588971507,
+          -0.017677312637788732,
+          -0.005747297632497954
+        ],
+        "velocity_mps": [
+          0.09505498663111393,
+          -0.002822861122046647,
+          -0.0007804512280836814
+        ],
+        "orientation_quat": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "angular_velocity_radps": [
+          -1.854477311641521e-18,
+          -2.7604025443225766e-19,
+          2.499870579161741e-21
+        ],
+        "fuel_remaining_pct": 97.04999999999933,
+        "orbital_elements": null,
+        "inertia_kg_m2": [
+          600.0,
+          900.0,
+          900.0
+        ],
+        "mass_kg": 500.0,
+        "name": "Spacecraft",
+        "capture_radius_m": 1.25,
+        "motion_limits": {
+          "min_speed_mps": 0.0,
+          "max_speed_mps": 2.0,
+          "max_horizontal_speed_mps": 2.0,
+          "max_vertical_speed_mps": 1.0
+        },
+        "inertial_position_m": null
+      },
+      "controller": "lqr",
+      "metrics": {
+        "delta_v_mps": 4.436014611778266,
+        "ise": 43036.07367870218,
+        "max_commanded_thrust_n": 52.57919285687951,
+        "total_llm_calls": 12,
+        "llm_fallback_calls": 0,
+        "anomaly_events_count": 0
+      },
+      "events_emitted": 132,
+      "llm_enabled": true,
+      "error": null
+    }
+  },
+  "stop_restart": "passed",
+  "manual_capture": "passed",
+  "responsive_chart_text": "at least 10.5 screen pixels at 320 and 390px",
+  "viewports": [
+    {
+      "width": 320,
+      "content": 320
+    },
+    {
+      "width": 390,
+      "content": 390
+    },
+    {
+      "width": 768,
+      "content": 768
+    },
+    {
+      "width": 1440,
+      "content": 1440
+    }
+  ],
+  "javascript_errors": [],
+  "verification_commands": {
+    "pytest": "83 passed",
+    "ruff": "check and format passed",
+    "vite": "production build passed"
+  },
+  "limits": [
+    "Deterministic planner with trained PPO advice; no paid-provider benchmark.",
+    "Chromium software WebGL; no physical-device frame-rate measurement.",
+    "Capture gate is simulated; no contact or hardware dynamics."
+  ],
+  "source_sha256": {
+    "frontend\\index.html": "9b500d404d9a2a9e1277df428689843afb471323478537d1bb7314c9dd9b3ab3",
+    "frontend\\src\\main.js": "e29277e9994df0200aed83bd5982691461fd56902473c9123a76e91963715729",
+    "frontend\\src\\scene.js": "5b858cc049df1adae85f06fb5168ddd5d1dbb3657f6bce87faafa7dfb563fa0f",
+    "frontend\\src\\styles.css": "8ac4d7693c8d1a5eb91f951ff4889e069f16ac8247e266f3be30a2bb65807bcd",
+    "scripts\\verify_dashboard.py": "40fd3e76933cfc1a65d98a762362c56e8eafa5fa48c3dee125ace1fbdce95d94"
+  }
+}

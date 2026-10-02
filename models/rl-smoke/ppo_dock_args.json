@@ -1,0 +1,19 @@
+{
+  "batch_size": 128,
+  "bc_episodes": 12,
+  "bc_epochs": 3,
+  "bc_lr": 0.001,
+  "eval_episodes": 3,
+  "eval_freq": 1000,
+  "expert": "pid",
+  "gamma": 0.99,
+  "lr": 0.0003,
+  "n_seeds": 2,
+  "n_steps": 1024,
+  "name": "ppo_dock",
+  "out_dir": "models/rl-smoke",
+  "resume": null,
+  "save_freq": 1000,
+  "seed": 0,
+  "timesteps": 2000
+}

@@ -1,0 +1,8 @@
+services:
+  docking:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      LLM_DOCKING_MODE: heuristic
+      LLM_DOCKING_RL_MODEL_PATH: proofs/kaggle-final-seed-42/ppo_dock.zip
+      LLM_DOCKING_RL_NORMALIZE_PATH: proofs/kaggle-final-seed-42/ppo_dock_vecnormalize.pkl

@@ -1,0 +1,39 @@
+{
+  "timesteps": 100000,
+  "out_dir": "/kaggle/working/llm-docking/proofs/kaggle-seed-42",
+  "device": "cuda:0",
+  "seed": 42,
+  "n_seeds": 8,
+  "n_steps": 256,
+  "batch_size": 512,
+  "lr": 1e-05,
+  "bc_episodes": 100,
+  "bc_epochs": 50,
+  "max_steps": 600,
+  "eval_freq": 20000,
+  "eval_episodes": 12,
+  "resume": null,
+  "resume_normalize": null,
+  "python": "3.12.13",
+  "torch": "2.10.0+cu128",
+  "capture_range_m": 1.25,
+  "initial_range_m": [
+    5,
+    80
+  ],
+  "dt_s": 1.0,
+  "observation": "14 values: subgoal position/velocity error, quaternion, rotation rate, fuel",
+  "reward": "bounded position cost, velocity and attitude cost, action cost, range progress, capture bonus 100",
+  "gpu": [
+    {
+      "name": "Tesla T4",
+      "memory_bytes": 15636037632
+    },
+    {
+      "name": "Tesla T4",
+      "memory_bytes": 15636037632
+    }
+  ],
+  "actual_timesteps": 100352,
+  "elapsed_seconds": 73.04157153900019
+}

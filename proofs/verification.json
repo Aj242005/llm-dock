@@ -1,0 +1,112 @@
+{
+  "tests_passed": 83,
+  "lint": "passed",
+  "frontend_build": "passed",
+  "browser": "Hybrid session docked; no JavaScript errors or horizontal overflow at desktop and 390px mobile",
+  "provider_verification": "Offline LangChain tool-call test; paid-provider calls not executed",
+  "proofs": [
+    {
+      "run": "kaggle-final-seed-137",
+      "actual_timesteps": 200704,
+      "device": "cuda:1",
+      "aggregate": [
+        {
+          "controller": "lqr",
+          "rl_advisor": false,
+          "docked": 50,
+          "trials": 50,
+          "success_rate": 1.0,
+          "wilson_95_percent": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        {
+          "controller": "pid",
+          "rl_advisor": false,
+          "docked": 50,
+          "trials": 50,
+          "success_rate": 1.0,
+          "wilson_95_percent": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        {
+          "controller": "rl",
+          "rl_advisor": false,
+          "docked": 50,
+          "trials": 50,
+          "success_rate": 1.0,
+          "wilson_95_percent": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        {
+          "controller": "lqr",
+          "rl_advisor": true,
+          "docked": 50,
+          "trials": 50,
+          "success_rate": 1.0,
+          "wilson_95_percent": [
+            0.9286499658256813,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "run": "kaggle-final-seed-42",
+      "actual_timesteps": 200704,
+      "device": "cuda:0",
+      "aggregate": [
+        {
+          "controller": "lqr",
+          "rl_advisor": false,
+          "docked": 50,
+          "trials": 50,
+          "success_rate": 1.0,
+          "wilson_95_percent": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        {
+          "controller": "pid",
+          "rl_advisor": false,
+          "docked": 50,
+          "trials": 50,
+          "success_rate": 1.0,
+          "wilson_95_percent": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        {
+          "controller": "rl",
+          "rl_advisor": false,
+          "docked": 50,
+          "trials": 50,
+          "success_rate": 1.0,
+          "wilson_95_percent": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        {
+          "controller": "lqr",
+          "rl_advisor": true,
+          "docked": 50,
+          "trials": 50,
+          "success_rate": 1.0,
+          "wilson_95_percent": [
+            0.9286499658256813,
+            1.0
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": "Local research simulator, no hardware certification; paired scenario seeds across training checkpoints"
+}

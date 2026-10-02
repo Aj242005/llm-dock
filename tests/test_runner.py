@@ -96,17 +96,17 @@ async def test_divergence_guard_fails_run():
 
 async def test_omega_guard_fails_tumbling_run():
     """A tumbling chaser (|ω| > max_omega_radps) fails DIVERGED, not crash."""
-    session = await _run(
-        make_request(
-            position=(50.0, 0.0, 0.0),
-            angular_velocity=(0.3, 0.0, 0.0),
-            max_steps=600,
-            max_omega_radps=0.05,
-        )
-    )
+    request = make_request(max_steps=600, max_omega_radps=0.05)
+    # Bypass request validation to exercise the runtime guard for an evolved state.
+    request.secondary.angular_velocity_radps = [0.3, 0.0, 0.0]
+    session = await _run(request)
     summary = session.summary
     assert summary.status == "failed"
     assert summary.failure_reason is FailureReason.DIVERGED
+    assert "rotation rate 0.300 rad/s" in summary.error
+    assert "0.05 rad/s tumble limit" in summary.error
+    assert summary.metrics.total_llm_calls == 0
+    assert not any(e.type == "planning" for e in session.event_log)
 
 
 async def test_fuel_exhaustion_fails_run():

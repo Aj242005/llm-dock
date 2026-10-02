@@ -337,6 +337,15 @@ class SimulateRequest(BaseModel):
                 or abs(satellite.velocity_mps[2]) > limits.max_vertical_speed_mps
             ):
                 raise ValueError("Initial velocity exceeds spacecraft motion limits")
+        rotation_rate = math.dist(
+            self.secondary.angular_velocity_radps, self.primary.angular_velocity_radps
+        )
+        if rotation_rate > self.config.max_omega_radps + 1e-9:
+            raise ValueError(
+                f"Initial relative rotation rate {rotation_rate:.3f} rad/s exceeds the "
+                f"tumble limit {self.config.max_omega_radps:g} rad/s. "
+                "Reduce the rotation-rate components; they use radians per second, not degrees."
+            )
         if self.secondary.orbital_elements is None and self.primary.orbital_elements is not None:
             # Secondary inherits the primary's orbit (same orbital regime in Hill frame).
             self.secondary.orbital_elements = self.primary.orbital_elements

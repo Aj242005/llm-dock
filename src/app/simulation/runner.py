@@ -192,6 +192,10 @@ class SimulationRunner:
             if self.session.cancel_requested:
                 await self._fail(step, sim_time, FailureReason.CANCELLED)
                 return
+            divergence = self._divergence_error(truth)
+            if divergence:
+                await self._fail(step, sim_time, FailureReason.DIVERGED, divergence)
+                return
             # ---- advance anomaly timelines (fires configured anomalies) ----
             observed, new_details = anomalies.advance(step, truth)
             for detail in new_details:
@@ -316,15 +320,6 @@ class SimulationRunner:
                 self._metrics.max_commanded_thrust_n, float(np.linalg.norm(command.force_n))
             )
 
-            # ---- divergence guards BEFORE propagating: an unstable command
-            #      (e.g. from a bad RL policy) must never push the state into
-            #      numerical blow-up — fail the run cleanly instead ----
-            if (float(np.linalg.norm(truth.position)) > (cfg.max_range_m or 1000)) or float(
-                np.linalg.norm(truth.omega)
-            ) > cfg.max_omega_radps:
-                await self._fail(step, sim_time, FailureReason.DIVERGED)
-                return
-
             # ---- propagate truth, burn fuel ----
             previous_velocity = truth.velocity.copy()
             truth = propagate_chaser(truth, dt, n, command)
@@ -354,8 +349,9 @@ class SimulationRunner:
                 ).tolist()
 
             self._last_truth = truth.deep_copy()
-            if float(np.linalg.norm(truth.position)) > (cfg.max_range_m or 1000):
-                await self._fail(step, sim_time, FailureReason.DIVERGED)
+            divergence = self._divergence_error(truth)
+            if divergence:
+                await self._fail(step, sim_time, FailureReason.DIVERGED, divergence)
                 return
             self._primary_frame.position_m = (
                 np.asarray(self.request.primary.position_m)
@@ -363,9 +359,6 @@ class SimulationRunner:
             ).tolist()
             self.session.capture = self._capture(truth)
             absolute_velocity = truth.velocity + np.asarray(self.request.primary.velocity_mps)
-            if not np.all(np.isfinite(truth.position)) or not np.all(np.isfinite(truth.velocity)):
-                await self._fail(step, sim_time, FailureReason.DIVERGED)
-                return
             if not np.allclose(
                 absolute_velocity,
                 limit_velocity(absolute_velocity, self.request.secondary.motion_limits),
@@ -519,6 +512,21 @@ class SimulationRunner:
         absolute_cap = cap + float(np.linalg.norm(self.request.primary.velocity_mps))
         limits.max_speed_mps = min(limits.max_speed_mps, absolute_cap)
         return limits
+
+    def _divergence_error(self, state):
+        """Name the condition that makes this run leave its physical envelope."""
+        values = np.concatenate([state.position, state.velocity, state.quat, state.omega])
+        if not np.isfinite(values).all():
+            return "Simulation stopped: position, velocity or attitude became non-finite. Reset the starting state."
+        distance = float(np.linalg.norm(state.position))
+        maximum = self.request.config.max_range_m or 1000
+        if distance > maximum:
+            return f"Simulation stopped: port separation {distance:.3f} m exceeded the {maximum:g} m range limit. Reduce the starting range or outward velocity."
+        rate = float(np.linalg.norm(state.omega))
+        limit = self.request.config.max_omega_radps
+        if rate > limit:
+            return f"Simulation stopped: relative rotation rate {rate:.3f} rad/s exceeded the {limit:g} rad/s tumble limit. Reduce the rotation-rate components; 1 rad/s is approximately 57.3 deg/s."
+        return None
 
     def _relative_speed_cap(self, state: RigidBodyState) -> float:
         """Stopping distance applies to port-relative speed, even for a moving target."""
@@ -811,6 +819,14 @@ class SimulationRunner:
         reason: FailureReason,
         error: str | None = None,
     ) -> None:
+        if error is None:
+            error = {
+                FailureReason.CANCELLED: "Session stopped by the user.",
+                FailureReason.FUEL_EXHAUSTED: "Simulation stopped: fuel is exhausted. Increase starting fuel or reduce manoeuvring demand.",
+                FailureReason.MAX_TIME_EXCEEDED: "Simulation stopped: the simulation-time budget was reached. Increase the time budget for this approach.",
+                FailureReason.MAX_STEPS_EXCEEDED: "Simulation stopped: the step budget was reached. Increase the step budget for this approach.",
+                FailureReason.LIMIT_EXCEEDED: "Simulation stopped: the motion envelope could not be maintained with the available thrust. Reduce starting velocity or adjust the actuator limits.",
+            }.get(reason)
         final = self._to_satellite(self._last_truth) if self._last_truth is not None else None
         await self._emit(
             FailedEvent(

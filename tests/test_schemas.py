@@ -27,6 +27,20 @@ def test_valid_request_accepts_secondary_inheriting_primary_orbit():
     assert req.secondary.orbital_elements is orbit
 
 
+def test_tumble_rate_is_rejected_before_starting_a_session():
+    with pytest.raises(ValidationError, match="6.708 rad/s.*5 rad/s"):
+        make_request(angular_velocity=(3, 6, 0))
+
+
+def test_tumble_limit_uses_relative_rotation_rate():
+    request = make_request(angular_velocity=(3, 0, 0))
+    request.primary.angular_velocity_radps = [0, -4, 0]
+    SimulateRequest.model_validate(request.model_dump())  # exact 5 rad/s boundary
+    request.primary.angular_velocity_radps = [0, -4.01, 0]
+    with pytest.raises(ValidationError, match="Initial relative rotation rate"):
+        SimulateRequest.model_validate(request.model_dump())
+
+
 @pytest.mark.parametrize("distance", [5.0, 7.5, 10.0])
 def test_initial_separation_includes_both_endpoints(distance):
     request = make_request(position=(distance, 0, 0), initial_separation_range_m=(5, 10))

@@ -123,6 +123,10 @@ session export are saved in `.impeccable/review/`.
    from the current state sustains the approach while Vertex replans.
 5. Commands pass through per-axis force/torque, total thrust, acceleration,
    configured velocity limits, and the stopping-distance envelope.
+   Starting rotation rates are validated against the configured relative tumble
+   limit (default 5 rad/s). The dashboard labels rad/s explicitly; 3 and 6 rad/s
+   combine to 6.708 rad/s and exceed this limit. Runtime stops report the specific
+   measured rate, range or budget condition in the right panel.
    When no bounded force can maintain a limit after a disturbance, the run
    fails explicitly rather than editing the physical velocity. Minimum speed
    is a transit preference; braking and docking permit zero speed.

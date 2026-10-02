@@ -56,6 +56,7 @@ function fields(prefix, label, primary) {
   ${triple("velocity", "Velocity", "m/s", [0, 0, 0])}
   ${triple("attitude", "Attitude · roll / pitch / yaw", "deg", primary ? [0, 0, 0] : [15, -20, 35])}
   ${triple("omega", "Rotation rate", "rad/s", [0, 0, 0])}
+  <p class="field-help">Radians per second: 0.01 rad/s ≈ 0.57 deg/s. Use 0 for an initially steady craft. The combined relative rate must stay within the tumble limit.</p>
   <div class="pair"><label>Mass <span>kg</span><input id="${prefix}-mass" type="number" value="500" min="1" max="100000" step="1" required></label><label>Fuel <span>%</span><input id="${prefix}-fuel" type="number" value="100" min="0" max="100" step="0.1" required></label></div>
   <div class="pair"><label>Min. transit speed <span>m/s</span><input id="${prefix}-min" type="number" value="0" min="0" max="20" step="0.01" required></label><label>Max. speed <span>m/s</span><input id="${prefix}-max" type="number" value="2" min="0.01" max="20" step="0.01" required></label></div>
   <div class="pair"><label>Max. horizontal <span>m/s</span><input id="${prefix}-horizontal" type="number" value="2" min="0.01" max="20" step="0.01" required></label><label>Max. vertical <span>m/s</span><input id="${prefix}-vertical" type="number" value="2" min="0.01" max="20" step="0.01" required></label></div>
@@ -142,6 +143,7 @@ function payload() {
       max_acceleration_mps2: number("max-acceleration"),
       near_port_speed_mps: number("near-speed"),
       max_range_m: 1000,
+      max_omega_radps: number("tumble-limit"),
       playback_speed: number("playback-speed"),
       fuel_consumption_rate_pct_per_s: 0.001,
       controller: $("controller").value,
@@ -165,6 +167,7 @@ function payload() {
 function preview() {
   if (running) return;
   $("s-position-x").setCustomValidity("");
+  $("s-omega-x").setCustomValidity("");
   if (!$("mission-form").checkValidity()) return;
   const data = payload();
   const relative = data.secondary.position_m.map(
@@ -193,6 +196,16 @@ function preview() {
     data.secondary.velocity_mps,
   );
   const separation = norm(relative);
+  const rotationRate = norm(data.secondary.angular_velocity_radps.map(
+    (value, index) => value - data.primary.angular_velocity_radps[index],
+  ));
+  const tumbleLimit = data.config.max_omega_radps;
+  const rateError = rotationRate > tumbleLimit + 1e-9
+    ? `Relative rotation rate ${rotationRate.toFixed(3)} rad/s exceeds the ${tumbleLimit} rad/s tumble limit. Reduce the rotation-rate components; 1 rad/s ≈ 57.3 deg/s.`
+    : "";
+  $("s-omega-x").setCustomValidity(rateError);
+  $("rotation-validation").textContent = rateError;
+  $("rotation-validation").hidden = !rateError;
   const minimum = number("start-range-min"),
     maximum = number("start-range-max");
   $("s-position-x").setCustomValidity(
@@ -484,6 +497,17 @@ $("mission-form").addEventListener("submit", async (event) => {
           type === "docked"
             ? "Capture confirmed · session ended"
             : "Session stopped";
+        if (type === "failed") {
+          const message = terminal.error || `Session ended: ${terminal.failure_reason.replaceAll("_", " ")}.`;
+          $("latest-rationale").textContent = message;
+          if (!decisionCount) {
+            $("latest-rl").textContent = "The session ended before a planner decision was received.";
+            $("latest-alternatives").replaceChildren();
+          }
+          $("planner-status").textContent = terminal.failure_reason === "cancelled"
+            ? "Stopped by user"
+            : "Stopped by simulation guard";
+        }
         if (latest)
           scene.update({
             ...latest,
@@ -511,7 +535,7 @@ $("mission-form").addEventListener("submit", async (event) => {
         $("time").innerHTML =
           `${terminal.sim_time_s.toFixed(1)} <small>s</small>`;
         chart();
-        if (terminal.error) showError(new Error(terminal.error));
+        if (terminal.error && terminal.failure_reason !== "cancelled") showError(new Error(terminal.error));
       });
     stream.onerror = () => {
       $("connection").textContent = "Stream reconnecting…";

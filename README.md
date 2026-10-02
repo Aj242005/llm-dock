@@ -2,7 +2,7 @@
 
 Satellite docking research simulator with a 3D flight dashboard, FastAPI event
 streams, LangChain tools, and an expert-initialized PPO advisor.
-
+See Demo -> https://www.loom.com/share/fc396b5ea4f344659464c48dba367314
 ## Run locally
 
 Python 3.11+ and Node 20+ are required. From the project root:

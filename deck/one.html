@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><title>slide</title>
+<style>body{background:#05080b;margin:0}img{display:block;width:100%;height:auto}
+figcaption{color:#6f8592;font:12px monospace;padding:6px}</style>
+<figure><img id="s"><figcaption id="c"></figcaption></figure>
+<script>
+const q = new URLSearchParams(location.search);
+const n = String(q.get('n') || '1').padStart(2,'0');
+const files = ["01-cover","02-problem","03-why-now","04-system","05-lanes","06-trace","07-gate","08-result","09-learner","10-evidence","11-safety","12-limits","13-integration","14-roadmap","15-ask","16-close"];
+const hit = files.find(f => f.startsWith(n)) || files[0];
+const img = document.getElementById('s');
+img.src = 'out/full/' + hit + '.png?v=' + Date.now();
+document.getElementById('c').textContent = hit;
+</script>

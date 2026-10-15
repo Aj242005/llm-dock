@@ -1,0 +1,14 @@
+{
+  "slides": 16,
+  "size": "13.333333333333334 x 7.5 in",
+  "fonts": [
+    "IBM Plex Mono",
+    "IBM Plex Sans",
+    "IBM Plex Serif"
+  ],
+  "pictures": 20,
+  "text_runs": 339,
+  "text_runs_with_content": 333,
+  "slides_with_notes": 16,
+  "size_mb": 1.45
+}

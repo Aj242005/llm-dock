@@ -1,0 +1,100 @@
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0b0f12;font-family:'IBM Plex Sans',sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+@font-face{font-family:'IBM Plex Sans';font-weight:400;src:url('assets/ibm-plex-sans-400.ttf')}
+@font-face{font-family:'IBM Plex Sans';font-weight:400;font-style:italic;src:url('assets/ibm-plex-sans-italic-400.ttf')}
+@font-face{font-family:'IBM Plex Sans';font-weight:500;src:url('assets/ibm-plex-sans-500.ttf')}
+@font-face{font-family:'IBM Plex Sans';font-weight:600;src:url('assets/ibm-plex-sans-600.ttf')}
+@font-face{font-family:'IBM Plex Sans';font-weight:700;src:url('assets/ibm-plex-sans-700.ttf')}
+@font-face{font-family:'IBM Plex Serif';font-weight:400;src:url('assets/fonts/IBMPlexSerif-Regular.ttf')}
+@font-face{font-family:'IBM Plex Serif';font-weight:400;font-style:italic;src:url('assets/fonts/IBMPlexSerif-Italic.ttf')}
+@font-face{font-family:'IBM Plex Serif';font-weight:500;src:url('assets/fonts/IBMPlexSerif-Medium.ttf')}
+@font-face{font-family:'IBM Plex Serif';font-weight:600;src:url('assets/fonts/IBMPlexSerif-SemiBold.ttf')}
+@font-face{font-family:'IBM Plex Serif';font-weight:700;src:url('assets/fonts/IBMPlexSerif-Bold.ttf')}
+@font-face{font-family:'IBM Plex Mono';font-weight:400;src:url('assets/ibm-plex-mono-400.ttf')}
+@font-face{font-family:'IBM Plex Mono';font-weight:500;src:url('assets/ibm-plex-mono-500.ttf')}
+.deck{display:flex;flex-direction:column;align-items:center;gap:28px;padding:28px 0}
+.slide{position:relative;width:1920px;height:1080px;overflow:hidden;
+  background:#F3EEE2;color:#1C241F;flex:0 0 auto;
+  font-variant-numeric:tabular-nums}
+.slide .art{position:absolute;inset:0}
+.slide .lay{position:absolute;inset:0}
+.el{position:absolute;white-space:pre-wrap;word-break:normal;line-height:0;
+  transform-origin:center center}
+.plate{position:absolute;transform-origin:center center}
+.hair{position:absolute}
+.num{position:absolute;font-variant-numeric:tabular-nums}
+.s-eyebrow{font-size:20px;font-weight:600;line-height:1.2;letter-spacing:0.15em;color:#1E6F5C;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-eyebrowMint{font-size:20px;font-weight:600;line-height:1.2;letter-spacing:0.15em;color:#8FD9C4;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-eyebrowCoral{font-size:20px;font-weight:600;line-height:1.2;letter-spacing:0.15em;color:#D8512F;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-eyebrowCream{font-size:20px;font-weight:600;line-height:1.2;letter-spacing:0.15em;color:#F4F1E8;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-mark{font-size:17px;font-weight:500;line-height:1.2;letter-spacing:0.18em;color:#6E7A6D;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-markDark{font-size:17px;font-weight:500;line-height:1.2;letter-spacing:0.18em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-label{font-size:19px;font-weight:600;line-height:1.25;letter-spacing:0.14em;color:#6E7A6D;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-labelInk{font-size:19px;font-weight:600;line-height:1.25;letter-spacing:0.14em;color:#3D473E;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-labelTeal{font-size:19px;font-weight:600;line-height:1.25;letter-spacing:0.14em;color:#1E6F5C;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-labelCream{font-size:19px;font-weight:600;line-height:1.25;letter-spacing:0.14em;color:#F4F1E8;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-labelMint{font-size:19px;font-weight:600;line-height:1.25;letter-spacing:0.14em;color:#8FD9C4;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-lead{font-size:29px;font-weight:400;line-height:1.48;letter-spacing:-0.006em;color:#3D473E;font-family:'IBM Plex Sans',sans-serif;}
+.s-leadDark{font-size:29px;font-weight:400;line-height:1.48;letter-spacing:-0.006em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;}
+.s-body{font-size:24px;font-weight:400;line-height:1.58;letter-spacing:0em;color:#3D473E;font-family:'IBM Plex Sans',sans-serif;}
+.s-bodyInk{font-size:24px;font-weight:400;line-height:1.58;letter-spacing:0em;color:#1C241F;font-family:'IBM Plex Sans',sans-serif;}
+.s-bodyDark{font-size:24px;font-weight:400;line-height:1.58;letter-spacing:0em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;}
+.s-bodySm{font-size:21px;font-weight:400;line-height:1.5;letter-spacing:0em;color:#3D473E;font-family:'IBM Plex Sans',sans-serif;}
+.s-bodySmDark{font-size:21px;font-weight:400;line-height:1.5;letter-spacing:0em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;}
+.s-bodySmInk{font-size:21px;font-weight:400;line-height:1.5;letter-spacing:0em;color:#1C241F;font-family:'IBM Plex Sans',sans-serif;}
+.s-bodySmCream{font-size:21px;font-weight:400;line-height:1.5;letter-spacing:0em;color:#F4F1E8;font-family:'IBM Plex Sans',sans-serif;}
+.s-caption{font-size:17px;font-weight:400;line-height:1.4;letter-spacing:0.02em;color:#6E7A6D;font-family:'IBM Plex Sans',sans-serif;}
+.s-captionDark{font-size:17px;font-weight:400;line-height:1.4;letter-spacing:0.02em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;}
+.s-captionInk{font-size:17px;font-weight:400;line-height:1.4;letter-spacing:0.02em;color:#3D473E;font-family:'IBM Plex Sans',sans-serif;}
+.s-note{font-size:19px;font-weight:400;line-height:1.45;letter-spacing:0em;color:#6E7A6D;font-family:'IBM Plex Sans',sans-serif;}
+.s-noteDark{font-size:19px;font-weight:400;line-height:1.45;letter-spacing:0em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;}
+.s-stat{font-size:92px;font-weight:700;line-height:1.0;letter-spacing:-0.03em;color:#1C241F;font-family:'IBM Plex Sans',sans-serif;}
+.s-statTeal{font-size:92px;font-weight:700;line-height:1.0;letter-spacing:-0.03em;color:#1E6F5C;font-family:'IBM Plex Sans',sans-serif;}
+.s-statCoral{font-size:92px;font-weight:700;line-height:1.0;letter-spacing:-0.03em;color:#D8512F;font-family:'IBM Plex Sans',sans-serif;}
+.s-statAmber{font-size:92px;font-weight:700;line-height:1.0;letter-spacing:-0.03em;color:#E29A2E;font-family:'IBM Plex Sans',sans-serif;}
+.s-statMint{font-size:92px;font-weight:700;line-height:1.0;letter-spacing:-0.03em;color:#8FD9C4;font-family:'IBM Plex Sans',sans-serif;}
+.s-statCream{font-size:92px;font-weight:700;line-height:1.0;letter-spacing:-0.03em;color:#F4F1E8;font-family:'IBM Plex Sans',sans-serif;}
+.s-statXl{font-size:128px;font-weight:700;line-height:1.0;letter-spacing:-0.035em;color:#F4F1E8;font-family:'IBM Plex Sans',sans-serif;}
+.s-statXlInk{font-size:128px;font-weight:700;line-height:1.0;letter-spacing:-0.035em;color:#1C241F;font-family:'IBM Plex Sans',sans-serif;}
+.s-statSm{font-size:58px;font-weight:700;line-height:1.02;letter-spacing:-0.025em;color:#1C241F;font-family:'IBM Plex Sans',sans-serif;}
+.s-statSmTeal{font-size:58px;font-weight:700;line-height:1.02;letter-spacing:-0.025em;color:#1E6F5C;font-family:'IBM Plex Sans',sans-serif;}
+.s-statSmCoral{font-size:58px;font-weight:700;line-height:1.02;letter-spacing:-0.025em;color:#D8512F;font-family:'IBM Plex Sans',sans-serif;}
+.s-statSmMint{font-size:58px;font-weight:700;line-height:1.02;letter-spacing:-0.025em;color:#8FD9C4;font-family:'IBM Plex Sans',sans-serif;}
+.s-statSmCream{font-size:58px;font-weight:700;line-height:1.02;letter-spacing:-0.025em;color:#F4F1E8;font-family:'IBM Plex Sans',sans-serif;}
+.s-unit{font-size:30px;font-weight:400;line-height:1.0;letter-spacing:-0.01em;color:#3D473E;font-family:'IBM Plex Sans',sans-serif;}
+.s-unitDark{font-size:30px;font-weight:400;line-height:1.0;letter-spacing:-0.01em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;}
+.s-unitSm{font-size:23px;font-weight:400;line-height:1.0;letter-spacing:-0.01em;color:#3D473E;font-family:'IBM Plex Sans',sans-serif;}
+.s-unitSmDark{font-size:23px;font-weight:400;line-height:1.0;letter-spacing:-0.01em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;}
+.s-unitSmCream{font-size:23px;font-weight:400;line-height:1.0;letter-spacing:-0.01em;color:#F4F1E8;font-family:'IBM Plex Sans',sans-serif;}
+.s-mono{font-size:20px;font-weight:400;line-height:1.5;letter-spacing:0em;color:#1C241F;font-family:'IBM Plex Mono',sans-serif;}
+.s-monoSm{font-size:17px;font-weight:400;line-height:1.5;letter-spacing:0em;color:#3D473E;font-family:'IBM Plex Mono',sans-serif;}
+.s-monoSmDark{font-size:17px;font-weight:400;line-height:1.5;letter-spacing:0em;color:#9DB0AB;font-family:'IBM Plex Mono',sans-serif;}
+.s-h1{font-size:84px;font-weight:500;line-height:1.06;letter-spacing:-0.018em;color:#1C241F;font-family:'IBM Plex Serif',sans-serif;}
+.s-h1xl{font-size:96px;font-weight:500;line-height:1.04;letter-spacing:-0.022em;color:#1C241F;font-family:'IBM Plex Serif',sans-serif;}
+.s-h1Dark{font-size:84px;font-weight:500;line-height:1.06;letter-spacing:-0.018em;color:#F4F1E8;font-family:'IBM Plex Serif',sans-serif;}
+.s-h1xlDark{font-size:96px;font-weight:500;line-height:1.04;letter-spacing:-0.022em;color:#F4F1E8;font-family:'IBM Plex Serif',sans-serif;}
+.s-h2{font-size:54px;font-weight:500;line-height:1.1;letter-spacing:-0.014em;color:#1C241F;font-family:'IBM Plex Serif',sans-serif;}
+.s-h2Dark{font-size:54px;font-weight:500;line-height:1.1;letter-spacing:-0.014em;color:#F4F1E8;font-family:'IBM Plex Serif',sans-serif;}
+.s-h3{font-size:31px;font-weight:600;line-height:1.16;letter-spacing:-0.01em;color:#1C241F;font-family:'IBM Plex Serif',sans-serif;}
+.s-h3Teal{font-size:31px;font-weight:600;line-height:1.16;letter-spacing:-0.01em;color:#1E6F5C;font-family:'IBM Plex Serif',sans-serif;}
+.s-h3Dark{font-size:31px;font-weight:600;line-height:1.16;letter-spacing:-0.01em;color:#F4F1E8;font-family:'IBM Plex Serif',sans-serif;}
+.s-kicker{font-size:32px;font-weight:400;line-height:1.32;letter-spacing:-0.005em;color:#3D473E;font-family:'IBM Plex Serif',sans-serif;font-style:italic;}
+.s-kickerDark{font-size:32px;font-weight:400;line-height:1.32;letter-spacing:-0.005em;color:#9DB0AB;font-family:'IBM Plex Serif',sans-serif;font-style:italic;}
+.s-kickerCoral{font-size:32px;font-weight:400;line-height:1.32;letter-spacing:-0.005em;color:#D8512F;font-family:'IBM Plex Serif',sans-serif;font-style:italic;}
+.s-kickerTeal{font-size:32px;font-weight:400;line-height:1.32;letter-spacing:-0.005em;color:#1E6F5C;font-family:'IBM Plex Serif',sans-serif;font-style:italic;}
+.s-quote{font-size:35px;font-weight:400;line-height:1.4;letter-spacing:-0.008em;color:#F4F1E8;font-family:'IBM Plex Serif',sans-serif;font-style:italic;}
+.s-attr{font-size:18px;font-weight:500;line-height:1.4;letter-spacing:0.02em;color:#9DB0AB;font-family:'IBM Plex Sans',sans-serif;}
+.s-chips{font-size:18px;font-weight:600;line-height:1.2;letter-spacing:0.12em;color:#1C241F;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-chipsCream{font-size:18px;font-weight:600;line-height:1.2;letter-spacing:0.12em;color:#F4F1E8;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+.s-chipsTeal{font-size:18px;font-weight:600;line-height:1.2;letter-spacing:0.12em;color:#1E6F5C;font-family:'IBM Plex Sans',sans-serif;text-transform:uppercase;}
+/* presentation shell */
+body.app .deck{display:block;padding:0;gap:0;height:100vh;overflow:hidden}
+body.app .slide{position:absolute;left:50%;top:50%;transform-origin:center center;
+  display:none;box-shadow:0 40px 120px #0006}
+body.app .slide.on{display:block}
+body.app{display:grid;place-items:center;height:100vh;overflow:hidden}
+.hint{position:fixed;right:14px;bottom:10px;color:#8b8578;font-size:12px;
+  font-family:'IBM Plex Sans',sans-serif;letter-spacing:.1em;z-index:9}
+body.shot .deck{padding:0;gap:0}
+body[data-mode="art"] .el,body[data-mode="art"] .pic,body[data-mode="art"] .note{visibility:hidden}
